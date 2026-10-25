@@ -1,0 +1,2408 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>PG TRB Physics Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* Layout concept: a revision desk. One sticky header with four tabs; content sits on flat white sheets over a cool paper ground.
+   Answer options are drawn as OMR bubbles (A-D), the way the real TRB sheet is marked in ballpoint blue. */
+:root{
+  --bg:#EDF0F6; --surface:#FFFFFF; --surface-2:#F5F7FB; --ink:#0F1B33; --ink-2:#44516D; --ink-3:#66728C;
+  --line:#D6DCE8; --grid:#E3E8F1;
+  --accent:#2B3FB8; --accent-ink:#FFFFFF; --accent-soft:#E3E8FB;
+  --good:#17784A; --good-soft:#DDF3E8; --bad:#B8312F; --bad-soft:#FBE3E2; --warn:#7A5200; --warn-soft:#FBEBC8;
+  --c1:#2a78d6; --c2:#eb6834; --c3:#1baf7a; --cx:#8A94AB;
+  --c4:#8a4fd8; --c5:#0f97a8; --c6:#d1408a; --mat:#7B3FA8; --mat-soft:#F1E6FA;
+  --shadow:0 1px 0 rgba(15,27,51,.04), 0 6px 18px -10px rgba(15,27,51,.18);
+  --f-display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --f-body:"IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --f-mono:"IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0C1220; --surface:#141C30; --surface-2:#1A2440; --ink:#E7ECF8; --ink-2:#B4BED6; --ink-3:#8F9BB8;
+    --line:#27324F; --grid:#222C47; --accent:#8EA0FF; --accent-ink:#0C1220; --accent-soft:#222C55;
+    --good:#5CD39A; --good-soft:#12362A; --bad:#FF8582; --bad-soft:#41191A; --warn:#F1C15C; --warn-soft:#3D2F0D;
+    --c1:#3987e5; --c2:#d95926; --c3:#199e70; --cx:#6F7A94; --c4:#a477ee; --c5:#22b3c4; --c6:#e0619f; --mat:#D2A8F2; --mat-soft:#33204A; --shadow:0 1px 0 rgba(0,0,0,.3), 0 8px 20px -12px rgba(0,0,0,.6);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0C1220; --surface:#141C30; --surface-2:#1A2440; --ink:#E7ECF8; --ink-2:#B4BED6; --ink-3:#8F9BB8;
+  --line:#27324F; --grid:#222C47; --accent:#8EA0FF; --accent-ink:#0C1220; --accent-soft:#222C55;
+  --good:#5CD39A; --good-soft:#12362A; --bad:#FF8582; --bad-soft:#41191A; --warn:#F1C15C; --warn-soft:#3D2F0D;
+  --c1:#3987e5; --c2:#d95926; --c3:#199e70; --cx:#6F7A94; --c4:#a477ee; --c5:#22b3c4; --c6:#e0619f; --mat:#D2A8F2; --mat-soft:#33204A; --shadow:0 1px 0 rgba(0,0,0,.3), 0 8px 20px -12px rgba(0,0,0,.6);
+  color-scheme: dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5;padding-inline:16px;padding-block:0 48px;-webkit-text-size-adjust:100%}
+.wrap{max-width:980px;margin-inline:auto}
+h1,h2,h3,h4,p{margin:0}
+h2{font-family:var(--f-display);font-weight:700;font-size:1.55rem;letter-spacing:-.01em;text-wrap:balance;line-height:1.15}
+h3{font-family:var(--f-display);font-weight:600;font-size:1.05rem;letter-spacing:-.005em;text-wrap:balance}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.sub{color:var(--ink-2);max-width:62ch}
+.muted{color:var(--ink-3)}
+
+/* header + tabs */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--bg);margin-inline:-16px;padding-inline:16px;border-bottom:1px solid var(--line)}
+.top-in{max-width:980px;margin-inline:auto}
+.brand{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-block:12px 8px;flex-wrap:wrap}
+.brand h1{font-family:var(--f-display);font-weight:700;font-size:1.2rem;letter-spacing:-.01em}
+.brand .kick{font-family:var(--f-mono);font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3)}
+.hdr-r{display:flex;flex-direction:column;align-items:flex-end;gap:0}
+.acct{font-size:.78rem;min-height:32px;padding:4px 0}
+.sync{display:inline-flex;align-items:center;gap:6px;font-size:.78rem;color:var(--ink-2)}
+.sync i{width:8px;height:8px;border-radius:50%;background:var(--cx);display:inline-block}
+.sync[data-s="cloud"] i{background:var(--good)}
+.sync[data-s="error"] i{background:var(--bad)}
+.tabs{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex:1 0 auto;background:none;border:0;border-bottom:3px solid transparent;padding:10px 10px 9px;white-space:nowrap;font-weight:600;color:var(--ink-2);min-height:44px;font-size:.95rem}
+.tab[aria-selected="true"]{color:var(--accent);border-bottom-color:var(--accent)}
+.tab:hover{color:var(--ink)}
+.tab[aria-selected="true"]:hover{color:var(--accent)}
+main{padding-top:22px}
+.panel[hidden]{display:none}
+.sec-head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px 24px;flex-wrap:wrap;margin-bottom:18px}
+.sec-head .sub{margin-top:6px}
+
+/* surfaces */
+.sheet{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;box-shadow:var(--shadow)}
+.sheet + .sheet{margin-top:16px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:16px}
+.grid2 > *{min-width:0;margin-top:0!important}
+.card-title{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.card-title .note{font-size:.8rem;color:var(--ink-3)}
+
+/* buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 18px;border-radius:10px;border:1px solid var(--line);background:var(--surface);font-weight:600}
+.btn:hover{border-color:var(--ink-3)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn[disabled]{opacity:.45;cursor:not-allowed;filter:none}
+.btn.small{min-height:36px;padding:0 12px;font-size:.88rem}
+.linkish{background:none;border:0;color:var(--accent);font-weight:600;padding:6px 0;min-height:36px}
+
+/* chips + pills */
+.chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface-2);border-radius:999px;padding:3px 10px;font-size:.78rem;color:var(--ink-2);line-height:1.5}
+.pill{display:inline-flex;align-items:center;border-radius:999px;padding:2px 10px;font-size:.75rem;font-weight:600;line-height:1.6;white-space:nowrap}
+.pill.good{background:var(--good-soft);color:var(--good)}
+.pill.bad{background:var(--bad-soft);color:var(--bad)}
+.pill.warn{background:var(--warn-soft);color:var(--warn)}
+.pill.neutral{background:var(--surface-2);color:var(--ink-2);border:1px solid var(--line)}
+.udot{width:10px;height:10px;border-radius:3px;display:inline-block;flex:none}
+.tag{font-family:var(--f-mono);font-size:.72rem;letter-spacing:.02em;border-radius:6px;padding:2px 8px;background:var(--accent-soft);color:var(--accent);display:inline-block}
+.tag.rel{background:var(--surface-2);color:var(--ink-2);border:1px solid var(--line)}
+
+/* syllabus */
+.prog{min-width:200px}
+.prog-num{font-family:var(--f-display);font-weight:700;font-size:1.6rem;line-height:1}
+.prog-num small{font-size:.85rem;font-weight:500;color:var(--ink-3);margin-left:4px;font-family:var(--f-body)}
+.bar{height:8px;border-radius:4px;background:var(--grid);margin-top:8px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent);border-radius:4px}
+.unit-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,430px),1fr));gap:14px}
+.ucard{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:12px;box-shadow:var(--shadow);min-width:0}
+.ucard.on{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent), var(--shadow)}
+.uhead{display:flex;gap:12px;align-items:flex-start;justify-content:space-between}
+.uhead .l{display:flex;gap:12px;min-width:0}
+.roman{font-family:var(--f-mono);font-weight:500;font-size:.8rem;border:1px solid var(--line);border-radius:6px;min-width:40px;height:28px;display:inline-flex;align-items:center;justify-content:center;color:var(--ink-2);flex:none;margin-top:1px}
+.uname{font-family:var(--f-display);font-weight:600;font-size:1.05rem;line-height:1.25;text-wrap:balance}
+.umeta{font-size:.8rem;color:var(--ink-3);margin-top:3px;display:flex;gap:6px 12px;flex-wrap:wrap}
+.switch{display:inline-flex;align-items:center;gap:10px;cursor:pointer;min-height:44px;flex:none;font-size:.85rem;font-weight:600;color:var(--ink-2)}
+.switch input{position:absolute;opacity:0;width:1px;height:1px}
+.switch .trk{width:42px;height:24px;border-radius:12px;background:var(--grid);border:1px solid var(--line);position:relative;transition:background .15s}
+.switch .trk::after{content:"";position:absolute;left:2px;top:2px;width:18px;height:18px;border-radius:50%;background:var(--ink-3);transition:transform .15s,background .15s}
+.switch input:checked + .trk{background:var(--accent);border-color:var(--accent)}
+.switch input:checked + .trk::after{transform:translateX(18px);background:var(--accent-ink)}
+.switch input:focus-visible + .trk{outline:2px solid var(--accent);outline-offset:2px}
+details.tp summary{cursor:pointer;color:var(--accent);font-weight:600;font-size:.85rem;list-style:none;min-height:32px;display:flex;align-items:center}
+details.tp summary::-webkit-details-marker{display:none}
+details.tp summary::before{content:"+";font-family:var(--f-mono);margin-right:8px;width:14px}
+details.tp[open] summary::before{content:"\2212"}
+.chips{display:flex;flex-wrap:wrap;gap:6px;padding-top:6px}
+.pattern{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:14px;margin-top:6px}
+.pattern h4{font-family:var(--f-display);font-size:.95rem;margin-bottom:6px}
+.pattern ul{margin:0;padding-left:18px;color:var(--ink-2);font-size:.9rem}
+
+/* practice */
+.setup-row{display:grid;gap:8px;margin-bottom:18px}
+.lbl{font-family:var(--f-mono);font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
+.optrow{display:flex;flex-wrap:wrap;gap:8px}
+.sel{position:relative}
+.sel input{position:absolute;opacity:0;width:1px;height:1px}
+.sel span{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 14px;border:1px solid var(--line);border-radius:10px;background:var(--surface);font-weight:500;cursor:pointer}
+.sel input:checked + span{border-color:var(--accent);background:var(--accent-soft);color:var(--accent);font-weight:600}
+.sel input:focus-visible + span{outline:2px solid var(--accent);outline-offset:2px}
+.sel input:disabled + span{opacity:.5;cursor:not-allowed}
+.hint{font-size:.85rem;color:var(--ink-3)}
+.start-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding-top:6px}
+.qhead{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.qhead .l{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.ticks{display:flex;gap:4px;margin-bottom:18px}
+.ticks i{flex:1;height:6px;border-radius:3px;background:var(--grid);min-width:4px}
+.ticks i.cur{background:var(--accent)}
+.ticks i.done{background:var(--ink-3)}
+.ticks i.ok{background:var(--good)}
+.ticks i.no{background:var(--bad)}
+.qtext{font-family:var(--f-display);font-weight:600;font-size:1.3rem;line-height:1.3;letter-spacing:-.005em;margin-bottom:18px;text-wrap:pretty;max-width:60ch}
+.opts{display:grid;gap:10px;max-width:640px}
+.opt{display:flex;align-items:center;gap:14px;text-align:left;width:100%;min-height:56px;padding:10px 14px;border:1px solid var(--line);border-radius:12px;background:var(--surface);transition:border-color .12s,background .12s}
+.opt:hover:not([disabled]){border-color:var(--ink-3)}
+.bub{flex:none;width:30px;height:30px;border-radius:50%;border:2px solid var(--ink-3);display:inline-flex;align-items:center;justify-content:center;font-family:var(--f-mono);font-size:.8rem;font-weight:500;color:var(--ink-2)}
+.opt .tx{flex:1;min-width:0;overflow-wrap:anywhere}
+.opt.selected{border-color:var(--accent);background:var(--accent-soft)}
+.opt.selected .bub{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.opt.correct{border-color:var(--good);background:var(--good-soft)}
+.opt.correct .bub{background:var(--good);border-color:var(--good);color:var(--surface)}
+.opt.wrong{border-color:var(--bad);background:var(--bad-soft)}
+.opt.wrong .bub{background:var(--bad);border-color:var(--bad);color:var(--surface)}
+.opt.dim{opacity:.6}
+.opt[disabled]{cursor:default}
+.verdict{margin-top:16px;border-radius:12px;padding:14px 16px;border:1px solid var(--line);background:var(--surface-2);max-width:640px;display:grid;gap:8px}
+.verdict.ok{border-color:var(--good);background:var(--good-soft)}
+.verdict.no{border-color:var(--bad);background:var(--bad-soft)}
+.verdict b.v{font-family:var(--f-display);font-size:1.05rem}
+.remember{border-left:3px solid var(--accent);padding-left:12px;color:var(--ink)}
+.remember .lbl{display:block;margin-bottom:2px;color:var(--accent)}
+.qnav{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:20px;max-width:640px;flex-wrap:wrap}
+.score-big{font-family:var(--f-display);font-weight:700;font-size:3.2rem;line-height:1;letter-spacing:-.02em}
+.score-big small{font-size:1.2rem;color:var(--ink-3);font-weight:500;margin-left:6px}
+.res-top{display:flex;gap:20px 36px;flex-wrap:wrap;align-items:flex-end;margin-bottom:18px}
+.ubreak{display:grid;gap:10px;min-width:min(100%,260px);flex:1}
+.review{display:grid;gap:10px;margin-top:6px}
+.ritem{border:1px solid var(--line);border-radius:10px;padding:12px 14px;background:var(--surface);display:grid;gap:6px}
+.ritem.no{border-color:var(--bad)}
+.ritem .q{font-weight:500}
+.ritem .ans{font-size:.9rem;color:var(--ink-2)}
+
+/* history */
+.rem-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:12px}
+.rem{border:1px solid var(--line);border-radius:10px;padding:14px;background:var(--surface);display:grid;gap:8px;align-content:start}
+.rem .q{font-weight:500}
+.rem .mine{font-size:.85rem;color:var(--bad)}
+.rem .right{font-size:.85rem;color:var(--good);font-weight:600}
+.sess{border:1px solid var(--line);border-radius:10px;background:var(--surface);overflow:hidden}
+.sess + .sess{margin-top:10px}
+.sess summary{display:flex;align-items:center;gap:10px 16px;flex-wrap:wrap;padding:12px 14px;cursor:pointer;list-style:none;min-height:56px}
+.sess summary::-webkit-details-marker{display:none}
+.sess summary::after{content:"+";margin-left:auto;font-family:var(--f-mono);color:var(--ink-3)}
+.sess[open] summary::after{content:"\2212"}
+.sess .sn{font-family:var(--f-display);font-weight:600}
+.sess .sd{color:var(--ink-3);font-size:.82rem}
+.sess .body{padding:4px 14px 14px;border-top:1px solid var(--line);display:grid;gap:10px}
+.tabbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--surface)}
+.seg button{border:0;background:none;min-height:40px;padding:0 14px;font-weight:600;color:var(--ink-2);display:inline-flex;align-items:center;gap:8px}
+.seg button + button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent)}
+.tscroll{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;min-width:520px;font-size:.9rem}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--f-mono);font-weight:500;font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);background:var(--surface-2)}
+tr:last-child td{border-bottom:0}
+td.num{font-family:var(--f-mono);white-space:nowrap}
+.empty{border:1px dashed var(--line);border-radius:10px;padding:18px;color:var(--ink-2);background:var(--surface-2)}
+
+/* dashboard */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr));gap:12px;margin-bottom:16px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px;box-shadow:var(--shadow)}
+.kpi .v{font-family:var(--f-display);font-weight:700;font-size:2rem;line-height:1.1;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.kpi .v small{font-size:.9rem;font-weight:500;color:var(--ink-3);margin-left:4px;font-family:var(--f-body)}
+.kpi .k{color:var(--ink-2);font-size:.85rem;margin-top:2px}
+.focus{display:grid;gap:10px}
+.frow{display:flex;gap:10px 14px;align-items:center;flex-wrap:wrap;padding:10px 0;border-top:1px solid var(--line)}
+.frow:first-child{border-top:0;padding-top:0}
+.frow .n{font-weight:600;flex:1;min-width:160px}
+.hbars{display:grid;gap:12px}
+.hb{display:grid;grid-template-columns:minmax(0,1fr);gap:5px}
+.hb .top2{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.hb .nm{display:flex;gap:8px;align-items:center;min-width:0;font-weight:500}
+.hb .nm span.t{overflow-wrap:anywhere}
+.hb .val{font-family:var(--f-mono);font-size:.82rem;color:var(--ink-2);white-space:nowrap;font-variant-numeric:tabular-nums}
+.track{height:10px;background:var(--grid);border-radius:5px;overflow:hidden}
+.track i{display:block;height:100%;border-radius:0 4px 4px 0}
+.track i.seen{border-radius:0 4px 4px 0}
+.svgc{width:100%;height:auto;display:block;overflow:visible}
+.svgc text{font-family:var(--f-mono);font-size:11px;fill:var(--ink-2)}
+.svgc .gl{stroke:var(--grid);stroke-width:1}
+.svgc .ln{fill:none;stroke:var(--accent);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.svgc .dot{fill:var(--accent);stroke:var(--surface);stroke-width:2}
+.svgc .hit{fill:transparent;cursor:pointer}
+.svgc .vl{fill:var(--ink);font-weight:500}
+.act{display:flex;gap:6px;align-items:flex-end;height:120px}
+.act .col{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:6px;height:100%;min-width:0}
+.act .b{width:100%;max-width:26px;background:var(--accent);border-radius:4px 4px 0 0;min-height:3px}
+.act .b.zero{background:var(--grid)}
+.act .d{font-family:var(--f-mono);font-size:.68rem;color:var(--ink-3)}
+.legend{display:flex;gap:6px 16px;flex-wrap:wrap;font-size:.8rem;color:var(--ink-2);margin-bottom:10px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+
+#tip{position:fixed;z-index:60;background:var(--ink);color:var(--bg);padding:6px 10px;border-radius:8px;font-size:.78rem;max-width:260px;pointer-events:none;box-shadow:0 6px 18px rgba(0,0,0,.25)}
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:500;z-index:70;max-width:calc(100vw - 32px);box-shadow:0 8px 24px rgba(0,0,0,.28)}
+@media (max-width:520px){
+  .qtext{font-size:1.15rem}
+  .score-big{font-size:2.6rem}
+  .sheet{padding:14px}
+}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+
+/* v2 additions */
+.tag.ex{background:var(--good-soft);color:var(--good)}
+.areas{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,430px),1fr));gap:14px}
+.area{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;box-shadow:var(--shadow);display:grid;gap:12px;align-content:start;min-width:0}
+.area-h{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap}
+.area-h .sm{font-size:.82rem;color:var(--ink-3);margin-top:2px}
+.urow{display:grid;gap:5px;padding-top:10px;border-top:1px solid var(--line)}
+.urow:first-of-type{border-top:0;padding-top:0}
+.urow .l1{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}
+.urow .nm{display:flex;gap:8px;align-items:center;font-weight:500;min-width:0}
+.urow .rt{display:flex;gap:8px;align-items:center;font-family:var(--f-mono);font-size:.8rem;color:var(--ink-2)}
+.loading{display:grid;gap:14px;justify-items:start;padding:8px 0}
+.spin{width:28px;height:28px;border-radius:50%;border:3px solid var(--grid);border-top-color:var(--accent);animation:sp .9s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.xfer textarea{width:100%;min-height:92px;border:1px solid var(--line);border-radius:10px;background:var(--surface-2);color:var(--ink);padding:10px;font-family:var(--f-mono);font-size:.75rem;resize:vertical}
+.xfer .row{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0 4px;align-items:center}
+.flagb{font-size:.82rem;min-height:32px;padding:0}
+.notice{border:1px solid var(--line);background:var(--surface-2);border-radius:10px;padding:10px 12px;font-size:.88rem;color:var(--ink-2)}
+@media (prefers-reduced-motion: reduce){.spin{animation:none}}
+
+/* v3: safe areas */
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--bg)}
+
+/* v3: shared form bits */
+.txt{min-height:44px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);padding:0 12px;width:100%;font-size:16px}
+select.txt{padding-right:8px}
+.txt::placeholder{color:var(--ink-3)}
+.vh{position:absolute;opacity:0;width:1px;height:1px;overflow:hidden;pointer-events:none}
+.check{display:flex;gap:10px;align-items:flex-start;cursor:pointer;font-size:.92rem;line-height:1.4}
+.check input{width:20px;height:20px;accent-color:var(--accent);margin:1px 0 0;flex:none}
+.check small{display:block;color:var(--ink-3);font-size:.82rem;margin-top:2px}
+.linkish.danger{color:var(--bad)}
+.tag.mat{background:var(--mat-soft);color:var(--mat)}
+.mknote{font-size:.86rem;color:var(--warn);background:var(--warn-soft);border-radius:8px;padding:6px 10px}
+
+/* v3: syllabus editing */
+.sec-tools{display:flex;gap:12px 20px;align-items:flex-end;flex-wrap:wrap}
+.chip.ed{padding-right:3px}
+.chip .x{border:0;background:none;width:26px;height:26px;margin:-3px 0;border-radius:50%;color:var(--ink-3);display:inline-flex;align-items:center;justify-content:center;font-size:1.05rem;line-height:1;padding:0}
+.chip .x:hover{background:var(--bad-soft);color:var(--bad)}
+.addrow{display:flex;gap:8px;margin-top:12px}
+.addrow .txt{flex:1;min-width:0}
+.addrow .btn{flex:none}
+.restore{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:.82rem;color:var(--ink-3);margin-top:12px}
+.restore button{border:1px dashed var(--line);background:none;border-radius:999px;padding:3px 10px;font-size:.78rem;color:var(--ink-2);min-height:30px}
+.restore button:hover{border-color:var(--accent);color:var(--accent)}
+.ufoot{display:flex;gap:4px 18px;flex-wrap:wrap;align-items:center;border-top:1px solid var(--line);padding-top:6px;margin-top:auto}
+.ucard.add{border-style:dashed;box-shadow:none;background:var(--surface-2)}
+.ucard.add .uname{margin-bottom:2px}
+.matcount{color:var(--mat);font-weight:600}
+
+/* v3: practice scope */
+.scopes{display:grid;gap:8px}
+.scope{border:1px solid var(--line);border-radius:12px;padding:6px 8px 6px 6px;background:var(--surface-2)}
+.scope-h{display:flex;align-items:center;justify-content:space-between;gap:4px 12px;flex-wrap:wrap}
+.scope-h .linkish{font-size:.85rem}
+.scope-subs{display:flex;flex-wrap:wrap;gap:6px;padding:8px 0 4px 2px}
+.sel.sm span{min-height:38px;padding:0 10px;font-size:.86rem;font-weight:500}
+.cnt{font-style:normal;font-family:var(--f-mono);font-size:.74rem;color:var(--ink-3);margin-left:2px}
+.sel input:checked + span .cnt{color:inherit;opacity:.75}
+.mini{display:flex;gap:16px;width:100%;padding-left:4px}
+.mini .linkish{min-height:32px;font-size:.85rem}
+
+/* v3: materials */
+.upform{display:grid;gap:18px}
+.upform .setup-row{margin-bottom:0}
+.files{display:grid;gap:6px}
+.file{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:10px;padding:4px 4px 4px 12px;background:var(--surface-2);font-size:.9rem;min-height:44px}
+.file .nm{flex:1;min-width:0;overflow-wrap:anywhere}
+.file .sz{font-family:var(--f-mono);font-size:.75rem;color:var(--ink-3);white-space:nowrap}
+.file .x{border:0;background:none;width:36px;height:36px;border-radius:8px;color:var(--ink-3);font-size:1.1rem}
+.file .x:hover{background:var(--bad-soft);color:var(--bad)}
+.pickrow{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.job{display:grid;gap:12px}
+.job .row1{display:flex;gap:14px;align-items:center}
+.job h3{overflow-wrap:anywhere}
+.jobbar{height:8px;border-radius:4px;background:var(--grid);overflow:hidden}
+.jobbar i{display:block;height:100%;background:var(--mat);transition:width .4s ease}
+.jres{display:grid;gap:4px;border-left:3px solid var(--mat);padding-left:12px}
+.jres.bad{border-left-color:var(--bad)}
+.jres b{overflow-wrap:anywhere}
+.mats{display:grid;gap:10px}
+.mgroup + .mgroup{margin-top:18px}
+.mgroup h4{font-family:var(--f-display);font-size:.95rem;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.mat{border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+.mat .mh{padding:12px 14px;display:grid;gap:6px}
+.mat .mn{font-weight:600;overflow-wrap:anywhere;line-height:1.35}
+.mat .mm{font-size:.82rem;color:var(--ink-3);display:flex;flex-wrap:wrap;gap:4px 12px}
+.mat .ma{display:flex;gap:2px 18px;flex-wrap:wrap;align-items:center}
+.mat details summary{cursor:pointer;color:var(--accent);font-weight:600;font-size:.88rem;list-style:none;min-height:36px;display:flex;align-items:center}
+.mat details summary::-webkit-details-marker{display:none}
+.mqs{border-top:1px solid var(--line)}
+.mq{padding:10px 14px;display:grid;gap:4px;font-size:.9rem;border-bottom:1px solid var(--line)}
+.mq:last-child{border-bottom:0}
+.mq .ans{color:var(--good);font-weight:600}
+.mq .meta{font-size:.78rem;color:var(--ink-3);display:flex;gap:4px 12px;flex-wrap:wrap;align-items:center}
+.mq.flagged{opacity:.55}
+.mmore{padding:10px 14px}
+@media (max-width:520px){
+  .tabs{display:grid;grid-template-columns:repeat(5,auto);justify-content:space-between;gap:0}
+  .tab{font-size:clamp(.7rem, 3.1vw, .85rem);padding-inline:2px}
+}
+.uhead{flex-wrap:wrap}
+.uhead .l{flex:1 1 210px}
+
+.sel input[data-state="some"] + span{border-color:var(--accent);border-style:dashed;color:var(--accent)}
+</style>
+</head>
+<body>
+<div class="top"><div class="top-in">
+  <div class="brand">
+    <div><div class="kick">TN TRB · PG Assistant</div><h1>Physics Tracker</h1></div>
+    <div class="hdr-r"><div class="sync" id="sync" data-s="local" aria-live="polite"><i></i><span>Saved in this browser</span></div><button class="linkish acct" id="acct" type="button" hidden></button></div>
+  </div>
+  <div class="tabs" role="tablist" aria-label="Sections">
+    <button class="tab" role="tab" id="t-dashboard" data-tab="dashboard" aria-selected="true" aria-controls="p-dashboard">Dashboard</button>
+    <button class="tab" role="tab" id="t-syllabus" data-tab="syllabus" aria-selected="false" aria-controls="p-syllabus">Syllabus</button>
+    <button class="tab" role="tab" id="t-materials" data-tab="materials" aria-selected="false" aria-controls="p-materials">Materials</button>
+    <button class="tab" role="tab" id="t-practice" data-tab="practice" aria-selected="false" aria-controls="p-practice">Practice</button>
+    <button class="tab" role="tab" id="t-history" data-tab="history" aria-selected="false" aria-controls="p-history">History</button>
+  </div>
+</div></div>
+
+<div class="wrap"><main>
+  <section class="panel" id="p-dashboard" role="tabpanel" aria-labelledby="t-dashboard"></section>
+  <section class="panel" id="p-syllabus" role="tabpanel" aria-labelledby="t-syllabus" hidden></section>
+  <section class="panel" id="p-materials" role="tabpanel" aria-labelledby="t-materials" hidden></section>
+  <section class="panel" id="p-practice" role="tabpanel" aria-labelledby="t-practice" hidden></section>
+  <section class="panel" id="p-history" role="tabpanel" aria-labelledby="t-history" hidden></section>
+</main></div>
+<div id="tip" role="tooltip" hidden></div>
+<div id="toast" role="status" hidden></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script>
+/* ===== HOSTED COPY: connection settings (filled in by Claude) ===== */
+const FIREBASE_CONFIG = {
+  "apiKey": "AIzaSyDaExLtg6_HgOlzb_9OWPEWA2n9UeJeTSM",
+  "authDomain": "pgtrp-4223a.firebaseapp.com",
+  "projectId": "pgtrp-4223a",
+  "storageBucket": "pgtrp-4223a.firebasestorage.app",
+  "messagingSenderId": "821078659592",
+  "appId": "1:821078659592:web:180b9574e57499ff0677bd"
+};
+const OWNER_EMAIL = "al.thiru6@gmail.com";
+/* ================================================================== */
+/* Runs the tracker on Firebase instead of claude.ai. Firestore keeps the shared record, and
+   Google sign-in tells the owner apart from everyone else who opens the link. */
+(function(){
+  const H = window.HOST = {ok:false, user:null, owner:false, usedOwner:null, msg:""};
+  let vid = null;
+  try{ vid = localStorage.getItem("trbphys.vid"); }catch(e){}
+  if(!vid || !/^v[a-z0-9]{8,24}$/.test(vid)){ vid = "v" + Math.random().toString(36).slice(2, 12) + Date.now().toString(36); try{ localStorage.setItem("trbphys.vid", vid); }catch(e){} }
+  H.vid = vid;
+  let fs = null, auth = null;
+  const configured = !!(FIREBASE_CONFIG && FIREBASE_CONFIG.apiKey && FIREBASE_CONFIG.projectId && window.firebase);
+  const isOwnerUser = u => !!(u && u.emailVerified && u.email && OWNER_EMAIL.indexOf("@") > 0 && u.email.toLowerCase() === OWNER_EMAIL.toLowerCase());
+  H.ready = new Promise(resolve=>{
+    if(!configured){ H.msg = window.firebase ? "setup" : "offline"; resolve(false); return; }
+    try{ firebase.initializeApp(FIREBASE_CONFIG); fs = firebase.firestore(); auth = firebase.auth(); }
+    catch(e){ H.msg = "setup"; resolve(false); return; }
+    let first = true;
+    const fin = () => { H.ok = true; resolve(true); };
+    auth.onAuthStateChanged(u=>{
+      H.user = u; H.owner = isOwnerUser(u);
+      paintAcct();
+      /* sign-in finished after the page had already started as a visitor (or the other way round) */
+      if(!first && H.usedOwner !== null && H.usedOwner !== H.owner) location.reload();
+      first = false; fin();
+    });
+    setTimeout(fin, 6000);
+  });
+  /* Firestore can't hold arrays inside arrays (each test is a list of [question, answer] pairs),
+     so every document is stored as one JSON string in a field called j. */
+  const ERR = {"permission-denied":"not_granted", "unauthenticated":"not_granted", "resource-exhausted":"quota_exceeded", "invalid-argument":"invalid_argument"};
+  const wrapErr = e => ({code: ERR[e && e.code] || "unavailable", message: (e && e.message) || ""});
+  const dec = d => { if(d && typeof d.j === "string"){ try{ return JSON.parse(d.j); }catch(e){ return null; } } return d || null; };
+  const enc = d => ({j: JSON.stringify(d)});
+  function wDoc(r){
+    return {
+      id: r.id, path: r.path,
+      set: d => r.set(enc(d)).catch(e=>{ throw wrapErr(e); }),
+      update: d => r.get().then(s=>r.set(enc(Object.assign({}, dec(s.data()) || {}, d)))).catch(e=>{ throw wrapErr(e); }),
+      delete: () => r.delete().catch(e=>{ throw wrapErr(e); }),
+      get: () => r.get().then(s=>({id:s.id, exists:s.exists, data:()=>dec(s.data())})).catch(e=>{ throw wrapErr(e); }),
+      onSnapshot: (next, err) => r.onSnapshot(s=>next({id:s.id, exists:s.exists, data:()=>dec(s.data())}), e=>{ if(err) err(wrapErr(e)); }),
+      collection: c => wColl(r.collection(c))
+    };
+  }
+  function wQuery(q){
+    return {
+      docs: s => s.docs.map(d=>({id:d.id, exists:true, data:()=>dec(d.data())})),
+      get(){ return q.get().then(s=>({docs:this.docs(s), size:s.size, empty:s.empty})).catch(e=>{ throw wrapErr(e); }); },
+      onSnapshot(next, err){ return q.onSnapshot(s=>next({docs:this.docs(s), size:s.size, empty:s.empty}), e=>{ if(err) err(wrapErr(e)); }); }
+    };
+  }
+  function wColl(c){ return Object.assign(wQuery(c), {path: c.path, doc: id => wDoc(id ? c.doc(id) : c.doc())}); }
+  const DBW = {doc: p => wDoc(fs.doc(p)), collection: p => wColl(fs.collection(p))};
+  const USER = {
+    id: async () => H.owner ? H.user.uid : H.vid,
+    isOwner: async () => { H.usedOwner = H.owner; return H.owner; },
+    canEdit: async () => H.owner,
+    can: async () => true
+  };
+  window.claude = {use: async name => {
+    const ok = await H.ready;
+    if(!ok) return null;
+    if(name === "db") return DBW;
+    if(name === "user") return USER;
+    return null;   /* Claude itself doesn't run here */
+  }};
+
+  /* ---- owner sign-in button in the header ---- */
+  function say(msg){ const t = document.getElementById("toast"); if(!t) return; t.textContent = msg; t.hidden = false; clearTimeout(say.t); say.t = setTimeout(()=>{ t.hidden = true; }, 6000); }
+  function paintAcct(){
+    const b = document.getElementById("acct"); if(!b) return;
+    if(!configured){ b.hidden = true; return; }
+    b.hidden = false;
+    b.textContent = H.owner ? "Owner · Sign out" : H.user ? "Not the owner account · Sign out" : "Owner sign-in";
+  }
+  H.paintAcct = paintAcct;
+  document.addEventListener("click", e=>{
+    const b = e.target.closest && e.target.closest("#acct"); if(!b || !auth) return;
+    if(H.user){ auth.signOut().then(()=>location.reload()); return; }
+    const prov = new firebase.auth.GoogleAuthProvider();
+    prov.setCustomParameters({prompt:"select_account"});
+    auth.signInWithPopup(prov).then(r=>{
+      if(!isOwnerUser(r.user)) say("That Google account isn’t the owner’s, so this browser stays a visitor.");
+      setTimeout(()=>location.reload(), isOwnerUser(r.user) ? 0 : 2500);
+    }).catch(err=>{
+      const c = err && err.code;
+      if(c === "auth/popup-closed-by-user" || c === "auth/cancelled-popup-request") return;
+      if(c === "auth/unauthorized-domain") say("Sign-in is blocked on this address. Add “"+location.hostname+"” in Firebase → Authentication → Settings → Authorized domains.");
+      else if(c === "auth/popup-blocked") say("Your browser blocked the sign-in window. Allow pop-ups for this site and try again.");
+      else say("Sign-in didn’t work ("+(c || "unknown error")+"). Try again.");
+    });
+  });
+  document.addEventListener("DOMContentLoaded", paintAcct);
+})();
+</script>
+<script>
+(function(){
+'use strict';
+/* ---------- DEFAULT SYLLABUS (the editable copy lives in S.syl) ---------- */
+const DEF_UNITS = [
+  {n:1, name:"Mathematical Physics", subs:["Dimensional analysis","Differential equations: order","Gradient, divergence, curl, Laplacian","Vector calculus","Gauss, Green and Stokes theorems","Cayley–Hamilton, matrix inverse","Eigenvalues and eigenvectors","Hermite, Bessel, Legendre functions","Beta and Gamma functions","Probability: Binomial, Poisson, Normal","Analytic functions, singular points","Cauchy integral theorem and formula","Taylor and Laurent series, poles, residues","Fourier series and transform","Group theory","Number systems"]},
+  {n:2, name:"Classical Mechanics", subs:["Constraints, generalised coordinates","Conservation laws","Degrees of freedom, holonomic systems","Lagrange equations, D'Alembert's principle","Pendulum, Atwood machine, oscillator, circuit","Hamilton's equations, cyclic coordinates","Variational principle, least action","Canonical transformation, Liouville's theorem","Euler angles, inertia tensor","Euler's equations, symmetrical top","Lorentz transformation","Length contraction, time dilation","Mass–energy relation"]},
+  {n:3, name:"Electromagnetic Theory", subs:["Coulomb's law","Gauss's law","Laplace and Poisson equations","Biot–Savart and Ampère's laws","Magnetic scalar and vector potentials","Magnetic susceptibility","Equation of continuity","Displacement current","Maxwell's equations","Electromagnetic waves","Poynting's theorem","Dielectrics, polarisation","Retarded potentials","Linear antenna radiation","Transmission lines, wave guides"]},
+  {n:4, name:"Quantum Mechanics", subs:["Failures of classical mechanics","Black-body radiation","Wave–particle duality","Postulates, wave function","Expectation values","Uncertainty principle","Schrödinger equations","Particle in a box (1D, 3D)","Finite well, barrier, tunnelling","Harmonic oscillator","Ladder and angular momentum operators","Hydrogen atom","Spin, Stern–Gerlach","Variational principle","Perturbation theory","Time-dependent perturbation, Fermi's golden rule","Identical particles","Pauli matrices, Dirac, Klein–Gordon","Commutators","Scattering, partial waves, Breit–Wigner"]},
+  {n:5, name:"Thermodynamics and Statistical Mechanics", subs:["Laws of thermodynamics","Closed and open systems","Thermodynamic processes","Potentials U, S, G, H","Specific heat, equation of state","Carnot cycle, entropy, T–S diagram","Equipartition theorem","Phase space, micro/macrostates","Ensembles, partition function","Maxwell–Boltzmann distribution","Kinetic theory, mean free path","Mean, RMS, most probable speed","BE and FD statistics","Black-body radiation, BEC"]},
+  {n:6, name:"Atomic Physics and Spectroscopy", subs:["Quantum states of an electron","Hydrogen spectrum","Spin–orbit coupling","Fine structure","Spectroscopic terms, selection rules","Hyperfine structure","Pauli exclusion, Hund's rule","Alkali spectra, LS and JJ coupling","Zeeman, Paschen–Back, Stark effects","ESR, NMR, chemical shift","Franck–Condon, Born–Oppenheimer","Diatomic molecular spectra"]},
+  {n:7, name:"Solid State Physics", subs:["Crystal structures, Bravais lattices","Miller indices, reciprocal lattice","Lattice dynamics","Einstein and Debye specific heat","Drude model, Wiedemann–Franz law","Energy bands, Brillouin zones","Bloch theorem, Kronig–Penney","Semiconductors: mobility, carriers","Dielectrics, Clausius–Mossotti","Piezo-, pyro-, ferroelectricity","Dia/para/ferro/antiferro/ferrimagnetism","Superconductivity: Meissner, BCS, Josephson"]},
+  {n:8, name:"Nuclear and Particle Physics", subs:["Nuclear properties","Binding energy, nuclear force","Liquid drop, semi-empirical mass formula","Shell and collective models","Deuteron","Meson theory, Yukawa potential","Alpha, beta, gamma decay","Radioactive decay","Fission, fusion, reactors","Fundamental interactions","Gell-Mann–Nishijima formula","Quark model, baryons, mesons","Parity non-conservation"]},
+  {n:9, name:"Electronics", subs:["Diodes, rectification, Zener, LED","Transistors: CB, CE, CC","Amplifiers and oscillators","FET, JFET, MOSFET","IC fabrication","555 timer, Wien bridge oscillator","Op-Amp IC 741 circuits","Flip-flops, registers, counters","Logic gates, NAND/NOR, adders","AM, FM, phase modulation","Satellite and fibre-optic communication"]},
+  {n:10, name:"Experimental Physics", subs:["Units, dimensions, significant figures","Precision, accuracy, error propagation","Least-squares fitting","Measurement of e, h, c","Detection of X-rays, γ-rays, particles, neutrons","Ionisation chamber, proportional counter","e/m measurement","Hall voltage, mobility, carrier concentration","R and C in series and parallel"]}
+];
+
+/* Question bank. u = unit, s = sub-topic id, o = options, a = index of correct option,
+   w = why it is right, r = what to remember, p = previous-year link (PYQ = same question, Related = same idea). */
+const BANK = [
+  /* ===== Day 1 set (already asked in chat) ===== */
+  {id:"d01",u:1,t:"Differential equations",q:"The order of the differential equation d²y/dx² + 3(dy/dx)³ + y = 0 is:",o:["1","2","3","4"],a:1,w:"Order is the highest derivative that appears, here d²y/dx². The cube on dy/dx does not change it.",r:"Order = highest derivative. Degree = power of that highest derivative (here 1)."},
+  {id:"d02",u:1,t:"Vector calculus",q:"The curl of the gradient of any scalar field is always:",o:["Zero","Undefined","Equal to the scalar field","A unit vector"],a:0,w:"Mixed second partial derivatives cancel, so ∇×(∇φ) = 0 identically.",r:"Two identities: ∇×(∇φ) = 0 and ∇·(∇×A) = 0."},
+  {id:"d03",u:1,t:"Vector calculus",q:"Stokes' theorem relates the surface integral of the curl of a vector field to:",o:["The volume integral over the enclosed region","The line integral around the boundary of the surface","The surface integral of the field itself","The divergence of the field"],a:1,w:"∬(∇×F)·dS = ∮F·dl: the circulation around the edge of the surface.",r:"Stokes: surface ↔ boundary line. Gauss (divergence): volume ↔ closed surface. Green = Stokes in 2D."},
+  {id:"d04",u:1,t:"Special functions",q:"The relation between the Beta and Gamma functions is B(m, n) =",o:["Γ(m)Γ(n)/Γ(m+n)","Γ(m+n)/Γ(m)Γ(n)","Γ(m)+Γ(n)","Γ(mn)"],a:0,w:"B(m,n) = ∫₀¹ x^(m−1)(1−x)^(n−1) dx = Γ(m)Γ(n)/Γ(m+n).",r:"B(m,n) = Γ(m)Γ(n)/Γ(m+n), and it is symmetric in m and n.",p:"Related · TRB 2019 Q71, 2025 Q60 (Gamma function)"},
+  {id:"d05",u:1,t:"Complex analysis",q:"The Cauchy–Riemann equations must be satisfied for a complex function to be:",o:["Continuous","Bounded","Analytic","Periodic"],a:2,w:"For f = u + iv, analyticity needs u_x = v_y and u_y = −v_x (with continuous partials).",r:"Analytic ⇒ Cauchy–Riemann holds. Not analytic where C–R fails (e.g. z̄).",p:"Related · TRB 2025 Q83 (which function is not analytic)"},
+  {id:"d06",u:3,t:"Electrostatics",q:"Gauss's law states that the total electric flux through a closed surface equals:",o:["The charge enclosed divided by ε₀","The permeability times current","Zero always","The potential at the surface"],a:0,w:"∯E·dA = Q_enc/ε₀.",r:"Flux depends only on enclosed charge, not on the surface shape.",p:"Related · TRB 2025 Q57, Q135"},
+  {id:"d07",u:3,t:"Magnetostatics",q:"The Biot–Savart law gives the magnetic field due to:",o:["A moving charge only","A small current element","A static charge","A changing electric field only"],a:1,w:"dB = (μ₀/4π) I dl × r̂ / r² for a current element.",r:"Biot–Savart is to magnetostatics what Coulomb's law is to electrostatics.",p:"Related · TRB 2019 Q38 (B at the centre of a coil)"},
+  {id:"d08",u:3,t:"Maxwell & waves",q:"Which of Maxwell's equations directly implies that magnetic monopoles do not exist?",o:["∇·E = ρ/ε₀","∇·B = 0","∇×E = −∂B/∂t","∇×B = μ₀J + μ₀ε₀∂E/∂t"],a:1,w:"∇·B = 0 means B-field lines never begin or end.",r:"∇·B = 0 ⇒ net magnetic flux through any closed surface is zero.",p:"Related · TRB 2019 Q40"},
+  {id:"d09",u:3,t:"Maxwell & waves",q:"The Poynting vector physically represents:",o:["Electric field strength","Magnetic flux density","Power flow per unit area","Charge density"],a:2,w:"S = E×H gives energy flow per unit area per unit time (W/m²).",r:"S = E × H = (E × B)/μ₀, in the direction the wave travels.",p:"Related · TRB 2025 Q115"},
+  {id:"d10",u:3,t:"Maxwell & waves",q:"Maxwell introduced the displacement current term to make Ampère's law consistent with:",o:["Gauss's law","The equation of continuity (charge conservation)","Faraday's law","Coulomb's law"],a:1,w:"Without it, ∇·(∇×B) = 0 would contradict ∇·J = −∂ρ/∂t.",r:"Displacement current = ε₀ ∂E/∂t. It fixes charge conservation in Ampère's law.",p:"Related · TRB 2025 Q93, 2019 Q106"},
+  {id:"d11",u:4,t:"Foundations",q:"The de Broglie wavelength of a particle of momentum p is given by:",o:["λ = h/p","λ = p/h","λ = hp","λ = h²/p"],a:0,w:"Every particle has a wavelength λ = h/p.",r:"λ = h/p. For an electron accelerated through V volts, λ ≈ 12.27/√V Å."},
+  {id:"d12",u:4,t:"Foundations",q:"Heisenberg's uncertainty principle is mathematically expressed as:",o:["Δx·Δp = 0","Δx·Δp ≥ ħ/2","Δx = Δp","Δx + Δp = ħ"],a:1,w:"Position and momentum cannot both be sharp: Δx·Δp ≥ ħ/2.",r:"Δx·Δp ≥ ħ/2 and ΔE·Δt ≥ ħ/2.",p:"Related · TRB 2019 Q98, 2025 Q139"},
+  {id:"d13",u:4,t:"Foundations",q:"The time-independent Schrödinger equation is written as:",o:["Hψ = Eψ","ψ = Hψ","EH = ψ","H = Eψ²"],a:0,w:"It is an eigenvalue equation: the Hamiltonian acting on ψ returns E times ψ.",r:"Hψ = Eψ with H = −(ħ²/2m)∇² + V.",p:"Related · TRB 2025 Q77"},
+  {id:"d14",u:4,t:"Foundations",q:"For a wavefunction to be physically acceptable, it must be single-valued, continuous, and:",o:["Real","Normalizable (finite/square-integrable)","Zero everywhere","Time-independent"],a:1,w:"∫|ψ|²dx must be finite so that probabilities can be defined.",r:"Acceptable ψ: single-valued, continuous, finite, normalisable (and ψ′ continuous where V is finite)."},
+  {id:"d15",u:4,t:"Eigenvalue problems",q:"The ground state (n = 1) energy of a particle in a 1D infinite potential box of width L is:",o:["E₁ = h²/(8mL²)","E₁ = h/(2mL)","E₁ = mL²/h²","E₁ = h²/(2mL)"],a:0,w:"Eₙ = n²h²/(8mL²), so n = 1 gives h²/(8mL²).",r:"Eₙ = n²h²/(8mL²). Lowest level is not zero.",p:"Related · TRB 2025 Q59, 2019 Q7"},
+
+  /* ===== Unit I – Mathematical Physics ===== */
+  {id:"m01",u:1,t:"Vector calculus",q:"The gradient of a scalar field is a:",o:["Vector","Scalar","Tensor of rank 2","Pseudoscalar only"],a:0,w:"∇φ has three components and points in the direction of steepest increase of φ.",r:"grad: scalar → vector. div: vector → scalar. curl: vector → vector."},
+  {id:"m02",u:1,t:"Vector calculus",q:"The divergence of the curl of any vector field, ∇·(∇×A), is:",o:["Zero","A itself","∇²A","A unit scalar"],a:0,w:"Mixed partial derivatives cancel in pairs.",r:"∇·(∇×A) = 0 and ∇×(∇φ) = 0. Learn them as a pair."},
+  {id:"m03",u:1,t:"Vector calculus",q:"The Laplacian ∇²φ of a scalar field φ is equal to:",o:["∇·(∇φ)","∇×(∇φ)","∇(∇×φ)","(∇φ)·φ"],a:0,w:"∇² = ∇·∇ = ∂²/∂x² + ∂²/∂y² + ∂²/∂z² in Cartesian coordinates.",r:"Laplacian = divergence of the gradient."},
+  {id:"m04",u:1,t:"Special functions",q:"The value of Γ(½) is:",o:["√π","π","1","√(π/2)"],a:0,w:"Γ(½) = ∫₀^∞ t^(−½)e^(−t) dt = √π, which follows from the Gaussian integral.",r:"Γ(½) = √π, Γ(1) = 1, Γ(n+1) = nΓ(n).",p:"PYQ · TRB 2025 Q60"},
+  {id:"m05",u:1,t:"Special functions",q:"For a positive integer n, Γ(n+1) equals:",o:["n!","(n+1)!","(n−1)!","nⁿ"],a:0,w:"Repeating Γ(n+1) = nΓ(n) down to Γ(1) = 1 gives n!.",r:"Γ(n+1) = n! for integer n. Γ(n+1) = nΓ(n) for any n > 0.",p:"Related · TRB 2019 Q71 (Gamma-function integral)"},
+  {id:"m06",u:1,t:"Matrices",q:"The Cayley–Hamilton theorem states that every square matrix:",o:["Is diagonalisable","Satisfies its own characteristic equation","Has only real eigenvalues","Equals its transpose"],a:1,w:"If p(λ) = det(A − λI), then p(A) = 0.",r:"Use it to find A⁻¹ and higher powers of A without direct multiplication.",p:"Related · TRB 2019 Q47, 2025 Q55 (eigenvalues)"},
+  {id:"m07",u:1,t:"Matrices",q:"The eigenvalues of a Hermitian matrix are always:",o:["Purely imaginary","Real","Complex with unit modulus","Zero"],a:1,w:"For Hermitian H, ⟨v|H|v⟩ is real, which forces real eigenvalues.",r:"Hermitian: real eigenvalues. Unitary: |λ| = 1. Anti-Hermitian: imaginary."},
+  {id:"m08",u:1,t:"Probability",q:"The mean of a binomial distribution with n trials and success probability p is:",o:["np","npq","√(npq)","n/p"],a:0,w:"Each trial contributes p on average, so the mean is np.",r:"Binomial: mean np, variance npq (q = 1 − p). Poisson: mean = variance = λ.",p:"PYQ · TRB 2025 Q107"},
+  {id:"m09",u:1,t:"Probability",q:"For a Poisson distribution with parameter λ, the mean and the variance are:",o:["Both equal to λ","λ and λ²","λ and √λ","Both equal to 1/λ"],a:0,w:"For the Poisson law P(k) = e^(−λ)λ^k/k!, both moments equal λ.",r:"Poisson: mean = variance = λ. It is the limit of the binomial for large n, small p.",p:"PYQ · TRB 2025 Q101"},
+  {id:"m10",u:1,t:"Complex analysis",q:"If f(z) is analytic inside and on a simple closed contour C, then ∮_C f(z) dz equals:",o:["Zero","2πi","2πi f(0)","f(z)"],a:0,w:"This is Cauchy's integral theorem.",r:"Cauchy theorem: ∮f dz = 0. Cauchy formula: f(a) = (1/2πi)∮ f(z)/(z−a) dz."},
+  {id:"m11",u:1,t:"Complex analysis",q:"In the Laurent expansion of f(z) about a singular point a, the coefficient of (z−a)⁻¹ is called the:",o:["Residue","Order of the pole","Branch point","Modulus"],a:0,w:"The residue is the (z−a)⁻¹ coefficient. ∮f dz = 2πi × (sum of residues inside).",r:"Residue theorem: ∮ f dz = 2πi Σ Res."},
+  {id:"m12",u:1,t:"Fourier & transforms",q:"The Fourier series of an even function f(x) on [−L, L] contains only:",o:["Cosine terms (and a constant)","Sine terms","Sine and cosine terms equally","Exponentials only"],a:0,w:"Even functions have bₙ = 0, so only the constant and cosine terms survive.",r:"Even → cosines only. Odd → sines only.",p:"Related · TRB 2025 Q73 (Σ1/n² via a Fourier series)"},
+  {id:"m13",u:1,t:"Special functions",q:"Legendre polynomials Pₙ(x) are orthogonal over the interval:",o:["−1 to 1","0 to ∞","−∞ to ∞","0 to 1"],a:0,w:"∫₋₁¹ Pₘ Pₙ dx = 2δₘₙ/(2n+1).",r:"Legendre: [−1, 1]. Hermite: (−∞, ∞) with e^(−x²). Laguerre: [0, ∞) with e^(−x).",p:"Related · TRB 2019 Q36, 2025 Q61"},
+  {id:"m14",u:1,t:"Special functions",q:"Hermite polynomials Hₙ(x) are orthogonal over (−∞, ∞) with weight function:",o:["e^(−x²)","e^(−x)","1","1/√(1−x²)"],a:0,w:"∫ Hₘ Hₙ e^(−x²) dx = 0 for m ≠ n.",r:"Hermite weight e^(−x²). The same polynomials appear in the quantum harmonic oscillator.",p:"Related · TRB 2019 Q35, 2025 Q121"},
+  {id:"m15",u:1,t:"Dimensional analysis",q:"The dimensional formula of energy (work) is:",o:["[M L² T⁻²]","[M L T⁻²]","[M L² T⁻¹]","[M L⁻¹ T⁻²]"],a:0,w:"Energy = force × distance = [M L T⁻²][L] = [M L² T⁻²].",r:"Force [MLT⁻²]; energy [ML²T⁻²]; power [ML²T⁻³]; pressure [ML⁻¹T⁻²]."},
+
+  /* ===== Unit III – Electromagnetic Theory ===== */
+  {id:"e01",u:3,t:"Electrostatics",q:"The electrostatic force between two point charges varies with their separation r as:",o:["1/r²","1/r","1/r³","r²"],a:0,w:"Coulomb's inverse-square law: F = q₁q₂/(4πε₀r²).",r:"Point-charge field ∝ 1/r², dipole field ∝ 1/r³.",p:"PYQ · TRB 2019 Q51"},
+  {id:"e02",u:3,t:"Magnetostatics",q:"The SI unit of magnetic permeability μ is:",o:["Henry per metre","Farad per metre","Ohm metre","Tesla"],a:0,w:"μ = B/H, which has units T·m/A = H/m.",r:"μ: H/m. ε: F/m. Tesla is the unit of B, not μ.",p:"PYQ · TRB 2019 Q58"},
+  {id:"e03",u:3,t:"Electrostatics",q:"Poisson's equation for the electrostatic potential V in vacuum is:",o:["∇²V = −ρ/ε₀","∇²V = 0","∇·V = ρ/ε₀","∇×V = −ρ/ε₀"],a:0,w:"Combine E = −∇V with ∇·E = ρ/ε₀.",r:"Poisson: ∇²V = −ρ/ε₀. Laplace (ρ = 0): ∇²V = 0.",p:"PYQ · TRB 2025 Q111, 2019 Q11"},
+  {id:"e04",u:3,t:"Electrostatics",q:"Laplace's equation ∇²V = 0 holds in a region where:",o:["There is no free charge","The field is uniform","The potential is infinite","The current density is zero"],a:0,w:"Setting ρ = 0 in Poisson's equation gives Laplace's equation.",r:"Laplace: charge-free region. A solution is fixed uniquely by its boundary values."},
+  {id:"e05",u:3,t:"Magnetostatics",q:"Ampère's circuital law (static form) states that ∮B·dl equals:",o:["μ₀ × enclosed current","ε₀ × enclosed charge","Zero always","−dΦ/dt"],a:0,w:"∮B·dl = μ₀I_enc.",r:"Maxwell added a displacement-current term: ∮B·dl = μ₀I + μ₀ε₀ dΦ_E/dt."},
+  {id:"e06",u:3,t:"Maxwell & waves",q:"Faraday's law of induction in differential form is:",o:["∇×E = −∂B/∂t","∇·E = −∂B/∂t","∇×B = −∂E/∂t","∇·B = −∂E/∂t"],a:0,w:"A changing magnetic field produces a circulating electric field.",r:"∇·E = ρ/ε₀; ∇·B = 0; ∇×E = −∂B/∂t; ∇×B = μ₀J + μ₀ε₀∂E/∂t."},
+  {id:"e07",u:3,t:"Maxwell & waves",q:"The speed of electromagnetic waves in vacuum is:",o:["1/√(μ₀ε₀)","√(μ₀ε₀)","μ₀/ε₀","1/(μ₀ε₀)"],a:0,w:"Maxwell's equations give the wave equation with v² = 1/(μ₀ε₀) = c².",r:"c = 1/√(μ₀ε₀). In a medium v = 1/√(με)."},
+  {id:"e08",u:3,t:"Maxwell & waves",q:"Electromagnetic waves in free space are:",o:["Transverse: E, B and the direction of travel are mutually perpendicular","Longitudinal","Transverse with E parallel to B","Longitudinal with E along the direction of travel"],a:0,w:"E and B oscillate in phase, at right angles to each other and to k.",r:"EM waves in free space: transverse, E ⟂ B ⟂ k, E/B = c."},
+  {id:"e09",u:3,t:"Maxwell & waves",q:"The equation of continuity, expressing conservation of charge, is:",o:["∇·J + ∂ρ/∂t = 0","∇×J = ∂ρ/∂t","∇·J = ρ","∇²J = 0"],a:0,w:"Current flowing out of a volume equals the rate at which its charge decreases.",r:"∇·J = −∂ρ/∂t.",p:"PYQ · TRB 2019 Q106, 2025 Q93"},
+  {id:"e10",u:3,t:"Maxwell & waves",q:"The energy stored per unit volume in an electromagnetic field is:",o:["½(ε₀E² + B²/μ₀)","ε₀E·B","E×B/μ₀","½ε₀μ₀EB"],a:0,w:"Electric part ½ε₀E² plus magnetic part B²/(2μ₀).",r:"Energy density u = ½(ε₀E² + B²/μ₀). Energy flow S = E×B/μ₀.",p:"PYQ · TRB 2025 Q115"},
+  {id:"e11",u:3,t:"Maxwell & waves",q:"Poynting's theorem is a statement of conservation of:",o:["Energy","Charge","Linear momentum only","Angular momentum"],a:0,w:"Decrease in field energy = energy flowing out (∮S·da) + work done on charges.",r:"Poynting theorem = energy conservation for the EM field."},
+  {id:"e12",u:3,t:"Potentials & radiation",q:"The Lorenz gauge condition is:",o:["∇·A = −μ₀ε₀ ∂φ/∂t","∇·A = 0","∇×A = 0","∇·A = μ₀J"],a:0,w:"This choice decouples the equations for φ and A into wave equations.",r:"Lorenz gauge: ∇·A + μ₀ε₀ ∂φ/∂t = 0. Coulomb gauge: ∇·A = 0.",p:"PYQ · TRB 2019 Q74"},
+  {id:"e13",u:3,t:"Currents & media",q:"Ohm's law in point (microscopic) form is:",o:["J = σE","J = E/σ²","J = σ/E","J = σ∇·E"],a:0,w:"Current density is proportional to the electric field, with conductivity σ as the constant.",r:"J = σE and σ = 1/ρ.",p:"PYQ · TRB 2019 Q60"},
+  {id:"e14",u:3,t:"Magnetostatics",q:"The magnetic vector potential A is defined through:",o:["B = ∇×A","B = ∇·A","B = ∇A","B = ∂A/∂t"],a:0,w:"Because ∇·B = 0, B can always be written as a curl.",r:"B = ∇×A and E = −∇φ − ∂A/∂t."},
+  {id:"e15",u:3,t:"Potentials & radiation",q:"The total power radiated by an oscillating electric dipole varies with angular frequency ω as:",o:["ω⁴","ω²","ω","ω⁻²"],a:0,w:"Radiation comes from the acceleration of the charges, and the power goes as (acceleration)².",r:"Dipole radiation: P ∝ ω⁴ (∝ 1/λ⁴). Angular pattern ∝ sin²θ.",p:"PYQ · TRB 2019 Q33"},
+  {id:"e16",u:3,t:"Electrostatics",q:"The differential form of Gauss's law for electricity is:",o:["∇·E = ρ/ε₀","∇×E = ρ/ε₀","∇·B = ρ/ε₀","∇²E = ρ"],a:0,w:"Apply the divergence theorem to ∯E·dA = Q/ε₀.",r:"∇·E = ρ/ε₀ (charges are the sources of E).",p:"PYQ · TRB 2025 Q135"},
+
+  /* ===== Unit IV – Quantum Mechanics ===== */
+  {id:"q01",u:4,t:"Foundations",q:"Black-body radiation was successfully explained by assuming that energy is exchanged in discrete quanta of:",o:["E = hν","E = ½kT","E = mc²","E = pv"],a:0,w:"Planck's 1900 quantum hypothesis.",r:"Planck: E = hν. Einstein: photoelectric effect. de Broglie: λ = h/p."},
+  {id:"q02",u:4,t:"Eigenvalue problems",q:"The zero-point (ground-state) energy of a linear harmonic oscillator of angular frequency ω is:",o:["½ħω","ħω","0","3ħω/2"],a:0,w:"Eₙ = (n + ½)ħω, so n = 0 gives ½ħω.",r:"Eₙ = (n + ½)ħω. Levels are equally spaced by ħω.",p:"PYQ · TRB 2019 Q29"},
+  {id:"q03",u:4,t:"Operators & angular momentum",q:"In the harmonic oscillator, the raising operator a† acting on |n⟩ gives a state proportional to:",o:["|n+1⟩","|n−1⟩","|n⟩","|0⟩"],a:0,w:"a†|n⟩ = √(n+1)|n+1⟩.",r:"a†|n⟩ = √(n+1)|n+1⟩, a|n⟩ = √n|n−1⟩, a|0⟩ = 0."},
+  {id:"q04",u:4,t:"Operators & angular momentum",q:"The commutator [x, pₓ] equals:",o:["iħ","ħ","0","−ħ²"],a:0,w:"[x, p]ψ = x(−iħψ′) − (−iħ)(xψ)′ = iħψ.",r:"[x, p] = iħ. [Lₓ, Lᵧ] = iħL_z. Non-commuting operators ⇒ uncertainty relation."},
+  {id:"q05",u:4,t:"Operators & angular momentum",q:"For orbital angular momentum quantum number l, the eigenvalue of L² is:",o:["l(l+1)ħ²","l²ħ²","lħ","(l+½)ħ²"],a:0,w:"L²Y_lm = l(l+1)ħ²Y_lm.",r:"L² → l(l+1)ħ². L_z → mħ, with m = −l … +l (2l+1 values).",p:"PYQ · TRB 2019 Q1"},
+  {id:"q06",u:4,t:"Eigenvalue problems",q:"For the particle-in-a-box state ψₙ = √(2/L) sin(nπx/L), the expectation value ⟨p⟩ is:",o:["Zero","nπħ/L","ħ/L","Infinite"],a:0,w:"ψ is a standing wave made of equal +k and −k parts, so the average momentum cancels. ⟨p²⟩ = (nπħ/L)² is not zero.",r:"A real wave function has ⟨p⟩ = 0. Do not confuse ⟨p⟩ with ⟨p²⟩.",p:"PYQ · TRB 2019 Q72"},
+  {id:"q07",u:4,t:"Spin & relativistic QM",q:"Which relation holds for the Pauli spin matrices?",o:["σₓ² = σᵧ² = σ_z² = I","σₓ² = −I","σₓσᵧ = σᵧσₓ","Tr(σₓ) = 1"],a:0,w:"Each Pauli matrix squares to the identity. They also anticommute and are traceless.",r:"Pauli matrices: Hermitian, traceless, square to I, anticommute (σₓσᵧ = iσ_z).",p:"Related · TRB 2025 Q34"},
+  {id:"q08",u:4,t:"Spin & relativistic QM",q:"The Stern–Gerlach experiment provided direct evidence for:",o:["Space quantisation of angular momentum (electron spin)","The wave nature of electrons","The photoelectric effect","Nuclear fission"],a:0,w:"A silver-atom beam split into discrete components in an inhomogeneous magnetic field.",r:"Stern–Gerlach: space quantisation. Later read as evidence for electron spin ½.",p:"PYQ · TRB 2019 Q25"},
+  {id:"q09",u:4,t:"Eigenvalue problems",q:"Quantum tunnelling means that a particle can:",o:["Cross a potential barrier higher than its energy","Gain energy from the vacuum","Travel faster than light","Stay at rest with zero momentum"],a:0,w:"The wave function decays inside the barrier but is non-zero on the far side.",r:"Transmission falls roughly as e^(−2κa), where κ = √(2m(V₀−E))/ħ."},
+  {id:"q10",u:4,t:"Approximation methods",q:"The variational method gives, for the ground-state energy, a trial value that is always:",o:["Greater than or equal to the true ground-state energy","Less than or equal to the true value","Exactly equal to it","Zero"],a:0,w:"Any trial function is a mixture of eigenstates, so ⟨H⟩ ≥ E₀.",r:"E_trial ≥ E₀: an upper bound. A better trial function gives a lower value.",p:"PYQ · TRB 2019 Q34"},
+  {id:"q11",u:4,t:"Approximation methods",q:"Fermi's golden rule gives:",o:["The transition rate per unit time","The ground-state energy","The scattering phase shift","The commutator of x and p"],a:0,w:"Rate = (2π/ħ)|⟨f|H′|i⟩|² ρ(E_f).",r:"Golden rule = time-dependent perturbation theory → transition probability per unit time."},
+  {id:"q12",u:4,t:"Eigenvalue problems",q:"Degeneracy of an energy level means:",o:["Several independent eigenfunctions share the same eigenvalue","The level lies at zero energy","The wave function is not normalisable","The level is unstable"],a:0,w:"Different states, same energy. Perturbations may split the level.",r:"Degenerate = same eigenvalue, many eigenfunctions. Needs degenerate perturbation theory.",p:"PYQ · TRB 2019 Q81"},
+  {id:"q13",u:4,t:"Spin & relativistic QM",q:"The Klein–Gordon equation describes:",o:["Relativistic spin-0 particles","Non-relativistic electrons","Spin-½ particles only","Photons only"],a:0,w:"It comes from E² = p²c² + m²c⁴ and is second order in time.",r:"Klein–Gordon: spin 0. Dirac: spin ½ (first order in time).",p:"Related · TRB 2019 Q59, 2025 Q85"},
+  {id:"q14",u:4,t:"Spin & relativistic QM",q:"A major success of the Dirac equation was predicting:",o:["Antiparticles (the positron) and electron spin ½","Photon polarisation","Neutron decay","Superconductivity"],a:0,w:"Negative-energy solutions led to the positron, and spin ½ came out automatically.",r:"Dirac equation → spin ½, magnetic moment g = 2, antimatter.",p:"Related · TRB 2019 Q100, 2025 Q85"},
+  {id:"q15",u:4,t:"Eigenvalue problems",q:"The ground-state energy of the hydrogen atom is:",o:["−13.6 eV","+13.6 eV","−3.4 eV","−27.2 eV"],a:0,w:"Eₙ = −13.6 eV/n², with n = 1.",r:"Eₙ = −13.6/n² eV. n = 2 gives −3.4 eV."},
+  {id:"q16",u:4,t:"Foundations",q:"In the Born interpretation, |ψ(x, t)|² represents:",o:["The probability density of finding the particle","The particle's momentum","The potential energy","The total energy"],a:0,w:"∫|ψ|² dx over a region is the probability of finding the particle there.",r:"|ψ|² = probability density. Normalisation: ∫|ψ|² dx = 1."},
+
+  /* ===== Real questions from the TRB 2019 Physics paper (wording as printed; answers from the tentative key) ===== */
+  {id:"y19_002",u:1,t:"Probability",x:true,q:"Which of these is not a characteristic of Poisson distribution? (Given: p or q are success or failure, n is the number of events, m is the Poisson distribution parameter)",o:["n is small and p is large","n is large and p is small","p is close to zero, the distribution is J shaped","entire distribution can be obtained from single parameter 'm'"],a:0,w:"The Poisson law applies when n is large and p is small, with m = np. The whole distribution depends on the single parameter m. So 'n small and p large' is the odd one out.",r:"Poisson: n large, p small, m = np, one parameter m, mean = variance = m.",p:"PYQ · TRB 2019 Q2"},
+  {id:"y19_003",u:1,t:"Number systems",x:true,q:"The number (100101)₂ is equivalent to octal ________.",o:["54","45","37","26"],a:1,w:"Group the bits in threes from the right: 100 | 101 = 4 | 5, which is 45 in octal.",r:"Binary to octal: groups of 3 bits. Binary to hex: groups of 4 bits.",p:"PYQ · TRB 2019 Q3"},
+  {id:"y19_026",u:1,t:"Group theory",x:true,q:"Two groups G and G′ of the same order having a one-to-one correspondence between their elements is called:",o:["Homomorphism","Isomorphism","Automorphism","Endomorphism"],a:1,w:"A one-to-one, operation-preserving correspondence between two groups is an isomorphism.",r:"Homomorphism preserves the operation. Isomorphism is a bijective homomorphism. Automorphism is an isomorphism of a group onto itself.",p:"PYQ · TRB 2019 Q26"},
+  {id:"y19_079",u:1,t:"Group theory",x:true,q:"If the determinant of unitary matrices of order 'n' is +1, then the subgroup is denoted by:",o:["FLG(n)","SU(n)","D(n)","C(n)"],a:1,w:"Unitary matrices form U(n). Those with determinant +1 form the special unitary group SU(n).",r:"U(n): unitary. SU(n): unitary with det = +1. O(n): orthogonal. SO(n): orthogonal with det = +1.",p:"PYQ · TRB 2019 Q79"},
+  {id:"y19_099",u:1,t:"Probability",x:true,q:"The life of an electronic device has a mean of 300 hours and a standard deviation of 25 hours. Assuming a normal distribution of lifetimes, find the probability that any one of these devices will have a lifetime of more than 350 hours.",o:["2","0.4772","1","0.0228"],a:3,w:"z = (350 − 300)/25 = 2. The area beyond z = 2 is 0.5 − 0.4772 = 0.0228.",r:"Normal table: area from 0 to z = 2 is 0.4772, so the tail beyond it is 0.0228. A probability can never exceed 1.",p:"PYQ · TRB 2019 Q99"},
+  {id:"y19_038",u:3,t:"Magnetostatics",x:true,q:"A circular coil having 50 turns has a radius of 0.1 m. What is the magnetic induction at the centre of the coil when a current of 0.1 A flows in it?",o:["3.14 × 10⁻⁵ tesla","6.28 × 10⁻⁵ tesla","2.81 × 10⁻⁴ tesla","25 tesla"],a:0,w:"B = μ₀NI/(2r) = (4π×10⁻⁷ × 50 × 0.1)/(2 × 0.1) = π × 10⁻⁵ ≈ 3.14 × 10⁻⁵ T.",r:"Centre of a circular coil: B = μ₀NI/2r. Long solenoid: B = μ₀nI.",p:"PYQ · TRB 2019 Q38"},
+  {id:"y19_040",u:3,t:"Maxwell & waves",x:true,q:"Which of the following equations explains that the net magnetic induction through any closed surface is zero?",o:["∇·B = 0","∇×B = 0","∇²B = 0","∇B = 0"],a:0,w:"Zero divergence of B means there are no magnetic monopoles, so the net flux through any closed surface vanishes.",r:"∇·B = 0 ⇔ ∯B·dA = 0.",p:"PYQ · TRB 2019 Q40"},
+  {id:"y19_007",u:4,t:"Eigenvalue problems",x:true,q:"If E₁ is the energy of the lowest state of a one-dimensional potential box of length 'a' and E₂ is the energy of the lowest state when the length of the box is halved, then the relation between E₁ and E₂ is:",o:["E₂ = E₁","E₂ = 2E₁","E₂ = 3E₁","E₂ = 4E₁"],a:3,w:"E = h²/(8mL²) ∝ 1/L². Halving L multiplies the energy by 4.",r:"Box energy ∝ 1/L². Half the width gives four times the energy.",p:"PYQ · TRB 2019 Q7"},
+  {id:"y19_012",u:4,t:"Eigenvalue problems",x:true,q:"At a surface at which there is an infinite potential step, the wave function becomes:",o:["infinity","real","complex","zero"],a:3,w:"The particle cannot enter a region of infinite potential, so ψ = 0 at the wall.",r:"Infinite wall: ψ = 0. Finite wall: ψ continues into the wall and decays.",p:"PYQ · TRB 2019 Q12"},
+  {id:"y19_025",u:4,t:"Spin & relativistic QM",x:true,q:"The experiment which first detects the spin of the electron is:",o:["Davis and Germer","Stern and Gerlach","G. P. Thomson","Michelson - Morley"],a:1,w:"The Stern–Gerlach experiment split a beam of atoms into discrete components and led to the idea of electron spin. Davisson–Germer and G. P. Thomson showed electron diffraction.",r:"Stern–Gerlach: space quantisation and spin. Davisson–Germer / G. P. Thomson: electron waves.",p:"PYQ · TRB 2019 Q25"},
+  {id:"y19_034",u:4,t:"Approximation methods",x:true,q:"The variation method yields:",o:["wave function for ground state","exact value of ground state energy","value of excited state energy","upper limit to the ground state energy"],a:3,w:"For any trial function, ⟨H⟩ ≥ E₀, so the variational value is an upper limit to the ground-state energy.",r:"Variation method: E_trial ≥ E₀ (an upper bound).",p:"PYQ · TRB 2019 Q34"},
+  {id:"y19_046",u:4,t:"Foundations",x:true,q:"The expectation value of the position vector of a particle is a function only of ________.",o:["time","space co-ordinates","t and r","None of these"],a:0,w:"⟨r⟩ = ∫ψ* r ψ d³r. Integrating over all space removes r, leaving only time dependence.",r:"An expectation value is a number. It can change with time but cannot depend on position.",p:"PYQ · TRB 2019 Q46"},
+  {id:"y19_075",u:4,t:"Approximation methods",x:true,q:"Perturbation method can be applied to:",o:["All problems (systems)","Systems with large perturbation","When the perturbation is small and the ground state properties are known","When the perturbation is small and the ground state properties are not known"],a:2,w:"Perturbation theory needs a small H′ and an exactly solved unperturbed problem, whose ground state is known.",r:"Perturbation theory: small H′ plus a known, solvable H₀.",p:"PYQ · TRB 2019 Q75"},
+  {id:"y19_081",u:4,t:"Eigenvalue problems",x:true,q:"An energy eigenvalue 'E' is said to be degenerate when:",o:["one eigenfunction has one eigenvalue","one eigenfunction has many eigenvalues","many eigenfunctions have many eigenvalues","many eigenfunctions for one eigenvalue"],a:3,w:"Degeneracy means several independent states share the same energy.",r:"Degenerate: many eigenfunctions, one eigenvalue.",p:"PYQ · TRB 2019 Q81"},
+  {id:"y19_100",u:4,t:"Spin & relativistic QM",x:true,q:"The energy gap in the Dirac free electron energy spectrum is:",o:["zero","2mc²","mc²","−mc²"],a:1,w:"The Dirac spectrum has E ≥ +mc² and E ≤ −mc², so the gap between the two bands is 2mc².",r:"Dirac sea: positive band from +mc², negative band up to −mc². Gap = 2mc².",p:"PYQ · TRB 2019 Q100"}
+];
+/* Day 1 result from the chat (14/15). Only the Stokes' theorem answer was wrong (picked option 0). */
+const SEED_ATTEMPT = {id:"day1", t:Date.UTC(2026,9,13,17,30), a:[["d01",1],["d02",0],["d03",0],["d04",0],["d05",2],["d06",0],["d07",1],["d08",1],["d09",2],["d10",1],["d11",0],["d12",1],["d13",0],["d14",1],["d15",0]]};
+
+/* Previous-year paper map: [question no, what was asked, answer]. 2019 answers are from the tentative key. */
+const PYQ = {
+  2019:{
+    1:[[2,"Poisson distribution: characteristic that does not apply","A (the tentative key says C)"],[3,"Binary 100101 to octal","45 (Key B)"],[16,"King, queen, jack from 3 cards","16/5525 (Key D)"],[20,"Three students solving a problem (½, ⅓, ¼)","¾ (Key C)"],[23,"Normal curve of the binomial distribution in terms of σ","Key C"],[26,"Groups with one-to-one correspondence","Isomorphism (Key B)"],[35,"Hermite polynomial formula","Key D"],[36,"Orthogonality of associated Legendre polynomials","Key B"],[39,"Orthogonal vectors","XᵀY = 0 (Key A)"],[44,"Normal form of a matrix of rank r","Key C"],[47,"Normalised eigenvector at eigenvalue 1","{1, 0, 0} (Key C)"],[49,"Every finite group is isomorphic to a subgroup of","Symmetric group (Key C)"],[71,"∫dx/√(−ln x) via the Gamma function","√π (Key D)"],[77,"Unit normal to x²+y²−z² = 11 at (4,2,3)","Key B"],[79,"Unitary matrices with determinant +1","SU(n) (Key B)"],[80,"Rank of the given matrix","1 (Key B)"],[89,"Inversion operation matrix in 3D","−I (Key C)"],[92,"Standard error (correlation)","(1−r²)/√N (Key D)"],[99,"Normal distribution, life above 350 h","0.0228 (Key D)"],[104,"Rodrigues formula for the Laguerre polynomial","Key D"]],
+    3:[[11,"d²φ/dx² = −4πρ is","Poisson's equation (Key D)"],[33,"Radiated power of an oscillating dipole","∝ ω⁴ (Key C)"],[38,"B at the centre of a 50-turn coil, r = 0.1 m, I = 0.1 A","3.14×10⁻⁵ T (Key A)"],[40,"Net magnetic flux through a closed surface","Zero, ∇·B = 0 (Key A)"],[51,"Coulomb force dependence on distance","∝ 1/r² (Key C)"],[58,"Unit of permeability","henry/metre (Key A)"],[60,"Ohm's law (point form)","J = σE (Key D)"],[67,"Depolarising factor of a sphere","1/3 (Key C)"],[74,"Divergence of the vector potential (Lorenz gauge)","∇·A = −μ₀ε₀ ∂φ/∂t (Key B)"],[106,"Equation of continuity","div J + ∂ρ/∂t = 0 (Key B)"]],
+    4:[[1,"Eigenvalue of L² for spherical harmonics","l(l+1)ħ² (Key C)"],[4,"Landé g-factor for L = 1, J = 3/2","4/3 (Key D)"],[7,"Particle in a box, length halved","E₂ = 4E₁ (Key D)"],[12,"Wave function at an infinite potential step","0 (Key D)"],[17,"Probability current density","Re(ψ* ħ/(im) ∇ψ) (Key B)"],[25,"Electron spin first detected by","Stern and Gerlach (Key B)"],[29,"Zero-point energy of the linear harmonic oscillator","½ħω (Key C)"],[34,"The variation method gives","Upper limit to the ground-state energy (Key D)"],[37,"L₊L₋","L² − L_z² + ħL_z (Key A)"],[46,"Expectation value of position","Depends on time (Key A)"],[59,"Klein–Gordon equation, correct statement","Key A"],[70,"Hydrogen-like wave function","∝ exp(−Zr/a₀) (Key A)"],[72,"Expectation of momentum for ψ = sin(nπx/L)","0 (Key D)"],[75,"Perturbation method applies when","Perturbation small, ground-state properties known (Key C)"],[81,"Degeneracy","Many eigenfunctions, one eigenvalue (Key D)"],[98,"Energy–time uncertainty","ΔE ≥ ħ/τ (Key B)"],[100,"Energy gap in the Dirac free-electron spectrum","2mc² (Key B)"],[102,"Probability current density, relativistic particle","Key D"]]
+  },
+  2025:{
+    1:[[33,"Arithmetic mean by the assumed-mean formula",""],[48,"Value of log[(x+iy)/(x−iy)]",""],[50,"Sine transform of e⁻ˣ",""],[55,"Eigenvalue equation",""],[60,"Value of Γ(½)","√π"],[61,"Legendre's differential equation: its form",""],[71,"Differential equation for y = ae³ˣ + beˣ",""],[72,"(x−y)/(x+y) with x = cosθ + i sinθ, y = cosφ + i sinφ",""],[73,"Σ1/n² using a Fourier series","π²/6"],[83,"Which function is not analytic",""],[101,"Mean of the Poisson distribution","λ"],[107,"Mean of the binomial distribution","np"],[121,"Hermite polynomial generating function",""]],
+    3:[[57,"Gauss's law for an infinite plane sheet of charge",""],[81,"2D Laplace equation from the 1D form",""],[93,"Principle behind the equation of continuity","Conservation of charge"],[111,"Poisson's equation","∇²V = −ρ/ε₀"],[115,"Energy per unit volume in an EM field","½(ε₀E² + B²/μ₀)"],[135,"Differential form of Gauss's law","∇·E = ρ/ε₀"]],
+    4:[[34,"Properties of Pauli matrices",""],[59,"Energy levels of a particle in a 1D box","n²h²/(8mL²)"],[77,"Hamiltonian operator in the time-independent Schrödinger equation",""],[85,"Statements on the Dirac equation",""],[86,"Quantum operator for p²/2m","−(ħ²/2m)∇²"],[94,"Time-independent perturbation theory statements",""],[98,"Degenerate perturbation theory statements",""],[100,"Parity of a system (assertion–reason)",""],[109,"Properties of angular momentum operators",""],[113,"Energy of the linear harmonic oscillator","(n+½)ħω"],[139,"Heisenberg's microscope / uncertainty principle",""]]
+  }
+};
+
+
+/* Sub-topic for each built-in question */
+const SUBMAP = {
+  d01:"u1s2",d02:"u1s3",d03:"u1s5",d04:"u1s9",d05:"u1s11",m01:"u1s3",m02:"u1s3",m03:"u1s3",m04:"u1s9",m05:"u1s9",m06:"u1s6",m07:"u1s7",m08:"u1s10",m09:"u1s10",m10:"u1s12",m11:"u1s13",m12:"u1s14",m13:"u1s8",m14:"u1s8",m15:"u1s1",
+  y19_002:"u1s10",y19_003:"u1s16",y19_026:"u1s15",y19_079:"u1s15",y19_099:"u1s10",
+  d06:"u3s2",d07:"u3s4",d08:"u3s9",d09:"u3s11",d10:"u3s8",e01:"u3s1",e02:"u3s6",e03:"u3s3",e04:"u3s3",e05:"u3s4",e06:"u3s9",e07:"u3s10",e08:"u3s10",e09:"u3s7",e10:"u3s11",e11:"u3s11",e12:"u3s13",e13:"u3s7",e14:"u3s5",e15:"u3s14",e16:"u3s2",y19_038:"u3s4",y19_040:"u3s9",
+  d11:"u4s3",d12:"u4s6",d13:"u4s7",d14:"u4s4",d15:"u4s8",q01:"u4s2",q02:"u4s10",q03:"u4s11",q04:"u4s19",q05:"u4s11",q06:"u4s5",q07:"u4s18",q08:"u4s13",q09:"u4s9",q10:"u4s14",q11:"u4s16",q12:"u4s7",q13:"u4s18",q14:"u4s18",q15:"u4s12",q16:"u4s4",
+  y19_007:"u4s8",y19_012:"u4s9",y19_025:"u4s13",y19_034:"u4s14",y19_046:"u4s5",y19_075:"u4s15",y19_081:"u4s7",y19_100:"u4s18"
+};
+BANK.forEach(q=>{ q.s = SUBMAP[q.id] || ""; });
+const BASE_LEN = BANK.length;
+const BY = {};
+/* Claude-written questions saved before sub-topics existed carry a coarse label in t. */
+const LEGACY = {"1|Differential equations":"u1s2","1|Vector calculus":"u1s4","1|Special functions":"u1s8","1|Complex analysis":"u1s11","1|Matrices":"u1s7","1|Probability":"u1s10","1|Fourier & transforms":"u1s14","1|Dimensional analysis":"u1s1","1|Number systems":"u1s16","1|Group theory":"u1s15","3|Electrostatics":"u3s1","3|Magnetostatics":"u3s4","3|Maxwell & waves":"u3s9","3|Potentials & radiation":"u3s13","3|Currents & media":"u3s7","4|Foundations":"u4s4","4|Eigenvalue problems":"u4s8","4|Operators & angular momentum":"u4s11","4|Spin & relativistic QM":"u4s18","4|Approximation methods":"u4s15"};
+
+/* ---------- HELPERS ---------- */
+const $ = (s, r) => (r || document).querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const pct = (a, b) => b ? Math.round(100 * a / b) : 0;
+const clone = o => JSON.parse(JSON.stringify(o));
+const LETTERS = ["A","B","C","D","E"];
+function shuffle(a){ a = a.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+function fmtDate(t){ try{ return new Date(t).toLocaleDateString(undefined,{day:"numeric",month:"short",year:"numeric"}); }catch(e){ return ""; } }
+function fmtTime(t){ try{ return new Date(t).toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"}); }catch(e){ return ""; } }
+function dkey(t){ const d = new Date(t); return d.getFullYear()+"-"+(d.getMonth()+1)+"-"+d.getDate(); }
+const isPyq = q => !!q.p && q.p.indexOf("PYQ") === 0;
+function pkey(q){ const m = q.p && q.p.match(/TRB (\d{4}) Q(\d+)/); return m ? m[1]+"Q"+m[2] : null; }
+function pyqTag(p){ if(!p) return ""; const rel = /^Related/.test(p); return '<span class="tag'+(rel?" rel":"")+'">'+esc(p)+'</span>'; }
+function roman(n){ const t=[[100,"C"],[90,"XC"],[50,"L"],[40,"XL"],[10,"X"],[9,"IX"],[5,"V"],[4,"IV"],[1,"I"]]; let s=""; for(const [v,r] of t){ while(n>=v){ s+=r; n-=v; } } return s; }
+function rid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+const normQ = s => String(s||"").toLowerCase().replace(/\s+/g," ").trim();
+function short(s, n){ s = String(s||""); return s.length > n ? s.slice(0, n-1).trimEnd()+"…" : s; }
+function plural(n, one, many){ return n+" "+(n===1 ? one : (many || one+"s")); }
+function fmtSize(b){ return b > 1048576 ? (b/1048576).toFixed(1)+" MB" : Math.max(1, Math.round(b/1024))+" KB"; }
+
+/* ---------- SYLLABUS MODEL ---------- */
+function defSyl(){ return {units: DEF_UNITS.map(u=>({n:u.n, name:u.name, subs:u.subs.map((s,i)=>({id:"u"+u.n+"s"+(i+1), name:s}))}))}; }
+function normSyl(raw){
+  const def = defSyl(), out = {units:[]}, seenU = new Set();
+  (raw && Array.isArray(raw.units) ? raw.units : []).forEach(u=>{
+    if(!u || !Number.isInteger(u.n) || u.n<1 || u.n>99 || seenU.has(u.n) || typeof u.name!=="string" || !u.name.trim()) return;
+    seenU.add(u.n);
+    const d = def.units.find(x=>x.n===u.n), subs = [], seenS = new Set();
+    (Array.isArray(u.subs) ? u.subs : []).forEach(s=>{
+      if(!s || typeof s.id!=="string" || !s.id || seenS.has(s.id) || typeof s.name!=="string" || !s.name.trim()) return;
+      seenS.add(s.id);
+      const o = {id:s.id, name:s.name.slice(0,120)}; if(s.off) o.off = true; if(s.custom) o.custom = true; subs.push(o);
+    });
+    if(d) d.subs.forEach(s=>{ if(!seenS.has(s.id)){ seenS.add(s.id); subs.push({id:s.id, name:s.name}); } });
+    const o = {n:u.n, name:u.name.slice(0,120), subs}; if(u.off) o.off = true; if(!d) o.custom = true; out.units.push(o);
+  });
+  def.units.forEach(d=>{ if(!seenU.has(d.n)) out.units.push(d); });
+  out.units.sort((a,b)=>a.n-b.n);
+  return out;
+}
+let SUBIX = {};
+function indexSyl(){ SUBIX = {}; S.syl.units.forEach(u=>u.subs.forEach(s=>{ SUBIX[s.id] = {u:u.n, s}; })); }
+const unitOf = n => S.syl.units.find(u=>u.n===n);
+const activeUnits = () => S.syl.units.filter(u=>!u.off);
+const activeSubs = u => u ? u.subs.filter(s=>!s.off) : [];
+const uname = n => (unitOf(n)||{}).name || ("Topic "+n);
+const subName = id => (SUBIX[id] && SUBIX[id].s.name) || "";
+function isActiveQ(q){ const u = unitOf(q.u); if(!u || u.off) return false; const x = SUBIX[q.s]; return !x || !x.s.off; }
+function legacySub(u, t){
+  const unit = unitOf(u); if(!unit) return "";
+  const byName = unit.subs.find(s=>s.name.toLowerCase() === String(t||"").toLowerCase());
+  if(byName) return byName.id;
+  if(LEGACY[u+"|"+t]) return LEGACY[u+"|"+t];
+  return unit.subs[0] ? unit.subs[0].id : "";
+}
+/* A topic with no sub-topics gets a "General" one, so every question has a home. */
+function ensureGeneralSub(n){
+  const u = unitOf(n); if(!u || activeSubs(u).length) return false;
+  const off = u.subs.find(s=>s.name.toLowerCase()==="general");
+  if(off) delete off.off; else u.subs.push({id:"c"+rid(), name:"General", custom:true});
+  indexSyl(); return true;
+}
+
+const PAL = ["var(--c1)","var(--c2)","var(--c3)","var(--c4)","var(--c5)","var(--c6)"];
+const UCOL = {1:0,2:3,3:1,4:2,5:4,6:5,7:3,8:4,9:5,10:0};
+const ucolor = n => PAL[UCOL[n] !== undefined ? UCOL[n] : n % 6];
+function unitChip(n, sid){ const sn = sid ? subName(sid) : ""; return '<span class="chip"><i class="udot" style="background:'+ucolor(n)+'"></i>'+esc(uname(n))+(sn?" · "+esc(sn):"")+'</span>'; }
+function srcChip(q){
+  if(q.x) return '<span class="tag ex">Exam question</span>';
+  if(q.m){
+    const m = MBY[q.m], nm = m ? short(m.name, 34) : "your material";
+    const where = (q.pg && m && m.pw) ? ", "+m.pw+" "+q.pg : "";
+    return '<span class="tag mat">'+(q.kind==="mcq" ? "Copied from " : "Based on ")+esc(nm+where)+'</span>';
+  }
+  return q.gen ? '<span class="tag rel">Written by Claude, unchecked</span>' : "";
+}
+function mkNote(q){ return q.mk !== undefined && q.o[q.mk] ? '<div class="mknote">Your material marks “'+esc(q.o[q.mk])+'” as the answer. The explanation says why the answer shown here is the correct one.</div>' : ""; }
+
+/* ---------- STATE ---------- */
+const LS_BASE = "trbphys.v2", LS_OLD = "trbphys.v1", LS_TAB = "trbphys.tab";
+let lsKey = LS_BASE + ":anon";
+const ME = {id:null, owner:false};
+/* GUEST: someone the owner shared the tracker with. Their tests and flags go to their own
+   guests/<id> folder, so only the owner can remove the owner's tests, flags and materials. */
+let GUEST = false, DB = null, gMarked = false, needMark = false;
+let WHO = ""; try{ WHO = localStorage.getItem("trbphys.who") || ""; }catch(e){}
+/* a test as stored: time, answers and (if given) the name of who took it */
+function sBody(d){ const b = {t:d.t, a:d.a}; if(typeof d.n === "string" && d.n.trim()) b.n = d.n.trim().slice(0,60); return b; }
+const GU = {};
+let SAMPLE = null, IMGLIM = null, READY = false;
+let GEN = [], M = [], MBY = {};
+let S = {completed:[], attempts:[], flags:[], syl:defSyl()};
+indexSyl();
+const P = {view:"setup", sel:null, open:new Set(), per:5, order:"priority", src:"all", fb:"instant", items:[], i:0, picks:[], result:null, quitArm:false, loadMsg:"", ctl:null, busy:false};
+const DRAFT = {};
+let VER = 0, STC = null, STV = -1, LVC = null, LVV = -1;
+function dirty(){ VER++; }
+
+function validState(d){ return d && Array.isArray(d.completed) && Array.isArray(d.attempts); }
+function validQ(q){ return q && typeof q.id==="string" && Number.isInteger(q.u) && q.u>=1 && q.u<=99 && typeof q.q==="string" && Array.isArray(q.o) && q.o.length===4 && q.o.every(o=>typeof o==="string") && Number.isInteger(q.a) && q.a>=0 && q.a<4 && typeof q.w==="string" && typeof q.r==="string"; }
+function rebuildBank(){
+  BANK.length = BASE_LEN;
+  GEN.forEach(q=>BANK.push(q));
+  MBY = {};
+  M.forEach(m=>{ MBY[m.id] = m; m.qs.forEach(q=>BANK.push(q)); });
+  Object.keys(BY).forEach(k=>{ delete BY[k]; });
+  BANK.forEach(q=>{
+    const x = SUBIX[q.s];
+    if(!x || x.u !== q.u){ const u = unitOf(q.u); const f = u && (activeSubs(u)[0] || u.subs[0]); q.s = f ? f.id : ""; }
+    BY[q.id] = q;
+  });
+  dirty();
+}
+function setGen(items){ GEN = (Array.isArray(items) ? items : []).filter(validQ).map(q=>({id:q.id,u:q.u,s:(typeof q.s==="string" && q.s) ? q.s : legacySub(q.u, q.t),q:q.q,o:q.o.slice(),a:q.a,w:q.w,r:q.r,gen:true})); rebuildBank(); }
+function normMat(m){
+  if(!m || typeof m.id!=="string" || !/^[A-Za-z0-9]+$/.test(m.id) || !Number.isInteger(m.u)) return null;
+  let status = ["done","partial","failed","working"].includes(m.status) ? m.status : "done", note = String(m.note||"");
+  if(status === "working" && !(JOB && JOB.mat && JOB.mat.id === m.id)){ status = "partial"; note = note || "Reading stopped before the end of the file."; }
+  return {id:m.id, name:String(m.name||"Material").slice(0,200), u:m.u, subs:Array.isArray(m.subs) ? m.subs.filter(s=>typeof s==="string") : null, at:Number(m.at)||Date.now(), pages:String(m.pages||""), status, note, how:String(m.how||""), pw:["p.","slide","photo"].includes(m.pw) ? m.pw : "",
+    qs:(Array.isArray(m.qs) ? m.qs : []).filter(validQ).map(q=>Object.assign({}, q, {u:m.u, m:m.id, kind:q.kind==="mcq" ? "mcq" : "notes"}))};
+}
+function packQ(q){ const o = {id:q.id,u:q.u,s:q.s,q:q.q,o:q.o,a:q.a,w:q.w,r:q.r,kind:q.kind}; if(q.pg) o.pg = q.pg; if(q.mk !== undefined) o.mk = q.mk; return o; }
+function packMat(m){ return {id:m.id,name:m.name,u:m.u,subs:m.subs,at:m.at,pages:m.pages,status:m.status,note:m.note,how:m.how,pw:m.pw,qs:m.qs.map(packQ)}; }
+function applyState(d){
+  const before = JSON.stringify([S.completed, S.syl]);
+  S = {completed: clone(d.completed), attempts: clone(d.attempts), flags: Array.isArray(d.flags) ? clone(d.flags) : [], syl: d.syl ? normSyl(d.syl) : S.syl};
+  indexSyl();
+  S.completed = [...new Set(S.completed)].filter(n=>{ if(!Number.isInteger(n)) return false; const u = unitOf(n); return u && !u.off; }).sort((a,b)=>a-b);
+  if(JSON.stringify([S.completed, S.syl]) !== before) P.sel = null;
+  rebuildBank();
+}
+function hasData(){ return S.completed.length > 0 || S.attempts.length > 0; }
+function seedOwner(){ applyState({completed:[1,3,4], attempts:[clone(SEED_ATTEMPT)], flags:[]}); }
+function live(){ if(LVV === VER) return LVC; const f = new Set(S.flags); LVC = BANK.filter(q=>!f.has(q.id) && isActiveQ(q)); LVV = VER; return LVC; }
+
+function readLS(key){ try{ const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : null; }catch(e){ return null; } }
+
+/* ---------- SAVING ----------
+   The shared record (db) is the source of truth. Each finished test, each flag and each batch of
+   Claude-written questions is its own document, so two phones never overwrite each other's work.
+   Anything the server has not confirmed yet waits in an outbox on this phone and is sent again
+   when the connection comes back. The browser copy is only a cache for a quick start. */
+let stateRef = null, sessRef = null, flagRef = null, genRef = null, qbankRef = null, matRef = null;
+let cloudBlocked = false, syncErr = false, seeded = false, lastMain = "", mainLegacy = false;
+let OUT = {s:{}, f:{}, g:{}};            /* pending: session id → body (null = delete), question id → flagged?, batch id → body (null = delete) */
+const CL = {s:{}, f:{}, g:{}, ls:{}, lf:[], lg:null, ready:{m:false, s:false, f:false, g:false, gl:false}, mainExists:false};
+const matSeen = {}, matChains = {}, matRetry = new Set(), sending = new Set(), WQ = [];
+let wRunning = 0;
+const cloudOn = () => !!stateRef && !cloudBlocked;
+const outCount = () => Object.keys(OUT.s).length + Object.keys(OUT.f).length + Object.keys(OUT.g).length + matRetry.size + (GUEST && needMark && !gMarked ? 1 : 0);
+const ownG = () => GU[ME.id] || {s:{}, f:{}};
+const mineS = () => GUEST ? ownG().s : CL.s;
+const mineF = () => GUEST ? ownG().f : CL.f;
+const guestHas = q => Object.keys(GU).some(g=>GU[g].f[q]);
+const othersFlag = q => !!CL.f[q] || CL.lf.includes(q) || Object.keys(GU).some(g=>g !== ME.id && GU[g].f[q]);
+const ownFlag = q => GUEST ? (!!ownG().f[q] || OUT.f[q] === true) : true;
+function ownColl(k){ return DB.collection("guests/"+ME.id+"/"+k); }
+function watchGuest(gid){
+  if(GU[gid] || typeof gid !== "string" || !/^[A-Za-z0-9_.~:@+-]{1,150}$/.test(gid)) return;
+  const g = GU[gid] = {s:{}, f:{}, rs:false, rf:false, un:[]};
+  try{
+    g.un.push(DB.collection("guests/"+gid+"/s").onSnapshot(snap=>{
+      g.s = {}; snap.docs.forEach(doc=>{ const d = doc.data(); if(d && Array.isArray(d.a) && typeof d.t === "number") g.s[doc.id] = sBody(d); });
+      g.rs = true; settle(); derive(); renderAll();
+    }, ()=>{}));
+    g.un.push(DB.collection("guests/"+gid+"/f").onSnapshot(snap=>{
+      g.f = {}; snap.docs.forEach(doc=>{ g.f[doc.id] = true; });
+      g.rf = true; settle(); derive(); renderAll();
+    }, ()=>{}));
+  }catch(e){}
+}
+/* Drop outbox entries the server has confirmed. */
+function settle(){
+  if(GUEST){
+    const g = GU[ME.id]; if(!g) return;
+    if(g.rs) Object.keys(OUT.s).forEach(id=>{ if(OUT.s[id] ? g.s[id] : !g.s[id]) delete OUT.s[id]; });
+    if(g.rf) Object.keys(OUT.f).forEach(q=>{ if(!!g.f[q] === OUT.f[q]) delete OUT.f[q]; });
+    if(CL.ready.gl && !gMarked && (Object.keys(g.s).length || Object.keys(g.f).length) && cloudOn()){ needMark = true; pushOut(); }
+    return;
+  }
+  if(CL.ready.s) Object.keys(OUT.s).forEach(id=>{ if(OUT.s[id] ? CL.s[id] : !CL.s[id]) delete OUT.s[id]; });
+  if(CL.ready.f) Object.keys(OUT.f).forEach(q=>{ const has = OUT.f[q] ? !!CL.f[q] : !!(CL.f[q] || guestHas(q)); if(has === OUT.f[q] && !CL.lf.includes(q)) delete OUT.f[q]; });
+}
+
+function loadLocal(key){
+  let d = readLS(key);
+  if(!validState(d) && key === LS_BASE+":anon") d = readLS(LS_OLD);
+  const o = readLS(key+":out");
+  if(o && typeof o === "object") OUT = {s:o.s || {}, f:o.f || {}, g:o.g || {}};
+  if(validState(d)){
+    applyState(d); setGen(d.gen);
+    const mats = readLS(key+":mats") || d.mats;
+    M = (Array.isArray(mats) ? mats : []).map(normMat).filter(Boolean); rebuildBank();
+    return true;
+  }
+  return false;
+}
+function persistLocal(){
+  try{ localStorage.setItem(lsKey, JSON.stringify({completed:S.completed, attempts:S.attempts, flags:S.flags, syl:S.syl, gen:GEN})); }catch(e){}
+  try{ localStorage.setItem(lsKey+":out", JSON.stringify(OUT)); }catch(e){}
+}
+function persistMats(){
+  try{ localStorage.setItem(lsKey+":mats", JSON.stringify(M.map(packMat))); }catch(e){ try{ localStorage.removeItem(lsKey+":mats"); }catch(_){} }
+}
+function setSync(){
+  const el = $("#sync"); if(!el) return;
+  const n = outCount();
+  let s = "cloud", txt = "Saved to the shared record";
+  if(!stateRef){ s = "local"; txt = "Saved on this device only"; }
+  else if(cloudBlocked){ s = "local"; txt = "View-only access, saved on this device only"; }
+  else if(n && syncErr){ s = "error"; txt = plural(n, "change")+" waiting to upload, will retry"; }
+  else if(n || wRunning){ s = "local"; txt = "Saving…"; }
+  el.dataset.s = s; el.lastElementChild.textContent = txt;
+}
+function onWriteErr(e){
+  const c = e && e.code;
+  if(c === "invalid_argument" || c === "not_granted" || c === "revoked"){ cloudBlocked = true; renderAll(); }
+  else { syncErr = true; if(c === "quota_exceeded") toast("Online storage is full. Delete a material you no longer need."); }
+  setSync();
+}
+/* A few writes at a time; each one is retried later if it fails. */
+function send(key, write, done){
+  if(sending.has(key)) return;
+  sending.add(key); WQ.push({key, write, done}); pump();
+}
+function pump(){
+  while(wRunning < 4 && WQ.length){
+    const t = WQ.shift(); wRunning++;
+    Promise.resolve().then(t.write).then(()=>{ syncErr = false; t.done(); persistLocal(); }, onWriteErr)
+      .finally(()=>{ wRunning--; sending.delete(t.key); afterWrites(); setSync(); pump(); });
+  }
+}
+function afterWrites(){
+  /* once the old one-record layout has been copied into separate documents, slim the record down */
+  if(mainLegacy && cloudOn() && !GUEST && !wRunning && !WQ.length && !Object.keys(OUT.s).length && !Object.keys(OUT.f).length){ mainLegacy = false; writeMain(true); }
+}
+function pushOut(){
+  if(!cloudOn()){ setSync(); return; }
+  if(GUEST && !gMarked && (needMark || Object.keys(OUT.s).length || Object.keys(OUT.f).length)){
+    needMark = true;
+    send("gmark", ()=>DB.doc("guests/"+ME.id).set({at:Date.now()}), ()=>{ needMark = false; gMarked = true; });
+  }
+  Object.keys(OUT.s).forEach(id=>{ const body = OUT.s[id], ref = GUEST ? ownColl("s") : sessRef;
+    send("s"+id, ()=> body ? ref.doc(id).set(sBody(body)) : ref.doc(id).delete(),
+      ()=>{ if(OUT.s[id] !== body) return; delete OUT.s[id]; const ms = mineS(); if(body) ms[id] = body; else delete ms[id]; }); });
+  Object.keys(OUT.f).forEach(q=>{ const on = OUT.f[q];
+    const w = GUEST
+      ? ()=> on ? ownColl("f").doc(q).set({q, at:Date.now()}) : ownColl("f").doc(q).delete()
+      /* the owner's "restore" also clears copies of that flag in guests' folders */
+      : ()=> on ? flagRef.doc(q).set({q, at:Date.now()}) : Promise.all([flagRef.doc(q).delete()].concat(Object.keys(GU).filter(g=>GU[g].f[q]).map(g=>DB.doc("guests/"+g+"/f/"+q).delete())));
+    send("f"+q, w,
+      ()=>{ if(OUT.f[q] !== on) return; delete OUT.f[q]; const mf = mineF(); if(on) mf[q] = true; else { delete mf[q]; if(!GUEST) Object.keys(GU).forEach(g=>{ delete GU[g].f[q]; }); } }); });
+  Object.keys(OUT.g).forEach(id=>{ const body = OUT.g[id];
+    send("g"+id, ()=> body ? genRef.doc(id).set(body) : genRef.doc(id).delete(),
+      ()=>{ if(OUT.g[id] !== body) return; delete OUT.g[id]; if(body) CL.g[id] = body; else delete CL.g[id];
+            if(id === "legacy" && qbankRef) qbankRef.delete().catch(()=>{}); }); });
+  [...matRetry].forEach(mid=>{ matRetry.delete(mid); const m = MBY[mid]; if(m) saveMat(m); });
+  [...matDel].forEach(mid=>dropMatDocs(mid));
+  setSync();
+}
+function writeMain(force){
+  if(!cloudOn()) return;
+  const body = {v:3, completed:S.completed.slice(), syl:clone(S.syl)};
+  const js = JSON.stringify(body);
+  if(!force && js === lastMain) return;
+  lastMain = js;
+  send("main"+Date.now(), ()=>stateRef.set(Object.assign(body, {updatedAt:Date.now()})), ()=>{});
+}
+/* topics completed and the syllabus */
+function save(){ dirty(); persistLocal(); writeMain(false); }
+function addSession(at){
+  S.attempts.push(at);
+  if(stateRef) OUT.s[at.id] = at;
+  dirty(); persistLocal(); pushOut();
+}
+function setFlags(ids, on){
+  if(!on && GUEST) ids = ids.filter(ownFlag);
+  ids.forEach(q=>{
+    if(on){ if(!S.flags.includes(q)) S.flags.push(q); } else S.flags = S.flags.filter(x=>x !== q);
+    if(stateRef) OUT.f[q] = on;
+  });
+  dirty(); persistLocal(); pushOut();
+}
+function addGen(items){
+  const id = "b"+rid();
+  GEN = GEN.concat(items); rebuildBank();
+  if(stateRef) OUT.g[id] = {at:Date.now(), items:items.map(q=>({id:q.id,u:q.u,s:q.s,q:q.q,o:q.o,a:q.a,w:q.w,r:q.r}))};
+  persistLocal(); pushOut();
+}
+function genTooBig(items){ return JSON.stringify(items).length > 200000; }
+/* Rebuild tests, flags and Claude-written questions from the server's copy plus this phone's outbox. */
+function derive(){
+  if(!stateRef) return;
+  if(CL.ready.s){
+    const gs = {}; Object.keys(GU).forEach(g=>Object.assign(gs, GU[g].s));
+    const all = Object.assign({}, CL.ls, gs, CL.s, OUT.s);
+    S.attempts = Object.keys(all).filter(id=>all[id]).map(id=>Object.assign({}, all[id], {id})).sort((a,b)=>a.t-b.t);
+  }
+  if(CL.ready.f){
+    const f = new Set(CL.lf.concat(Object.keys(CL.f)));
+    Object.keys(GU).forEach(g=>Object.keys(GU[g].f).forEach(q=>f.add(q)));
+    Object.keys(OUT.f).forEach(q=>{ if(OUT.f[q]) f.add(q); else if(!GUEST || !othersFlag(q)) f.delete(q); });
+    S.flags = [...f];
+  }
+  if(CL.ready.g){
+    const all = Object.assign({}, CL.lg ? {legacy:{at:0, items:CL.lg}} : {}, CL.g, OUT.g), seen = new Set(), items = [];
+    Object.keys(all).filter(id=>all[id]).map(id=>all[id]).sort((a,b)=>(a.at||0)-(b.at||0)).forEach(b=>(b.items || []).forEach(q=>{ if(q && !seen.has(q.id)){ seen.add(q.id); items.push(q); } }));
+    setGen(items);
+  } else rebuildBank();
+  persistLocal();
+}
+function applyMain(d){
+  const before = JSON.stringify([S.completed, S.syl]);
+  if(d.syl) S.syl = normSyl(d.syl);
+  indexSyl();
+  S.completed = [...new Set(d.completed)].filter(n=>{ if(!Number.isInteger(n)) return false; const u = unitOf(n); return u && !u.off; }).sort((a,b)=>a-b);
+  if(JSON.stringify([S.completed, S.syl]) !== before){ P.sel = null; rebuildBank(); persistLocal(); }
+}
+function maybeSeed(){
+  if(seeded || !CL.ready.m || !CL.ready.s) return;
+  seeded = true;
+  if(CL.mainExists || Object.keys(CL.s).length || Object.keys(OUT.s).length){ if(!CL.mainExists && S.completed.length) writeMain(true); return; }
+  if(!ME.owner || !cloudOn()) return;
+  S.completed = [1,3,4]; P.sel = null; writeMain(true);
+  addSession(clone(SEED_ATTEMPT));
+}
+
+/* Each material is stored as one or more documents of up to ~180 KB: materials/<id>_<part>. */
+const MAT_PART_MAX = 180000;
+const matDel = new Set();
+function matDocs(m){
+  const meta = {mid:m.id, name:m.name, u:m.u, subs:m.subs || null, at:m.at, pages:m.pages || "", status:m.status, note:m.note || "", how:m.how || "", pw:m.pw || ""};
+  const parts = []; let cur = [], size = 0;
+  m.qs.forEach(q=>{ const p = packQ(q), j = JSON.stringify(p).length; if(cur.length && size + j > MAT_PART_MAX){ parts.push(cur); cur = []; size = 0; } cur.push(p); size += j; });
+  parts.push(cur);
+  return parts.map((qs, i)=>({id:m.id+"_"+i, body:Object.assign({}, meta, {part:i, parts:parts.length, qs})}));
+}
+function chainWrite(id, onFail, fn){
+  matChains[id] = (matChains[id] || Promise.resolve()).then(fn).then(()=>{ syncErr = false; setSync(); })
+    .catch(e=>{ delete matSeen[id]; onFail(); onWriteErr(e); });
+}
+function saveMat(m){
+  persistMats();
+  if(!cloudOn() || GUEST){ return; }
+  const docs = matDocs(m), keep = new Set(docs.map(d=>d.id));
+  docs.forEach(d=>{ const js = JSON.stringify(d.body); if(matSeen[d.id] === js) return; matSeen[d.id] = js; chainWrite(d.id, ()=>matRetry.add(m.id), ()=>matRef.doc(d.id).set(d.body)); });
+  Object.keys(matSeen).forEach(id=>{ if(id.slice(0, id.lastIndexOf("_")) === m.id && !keep.has(id)){ delete matSeen[id]; chainWrite(id, ()=>matRetry.add(m.id), ()=>matRef.doc(id).delete()); } });
+}
+function dropMatDocs(mid){
+  persistMats();
+  if(!cloudOn() || GUEST) return;
+  matDel.delete(mid);
+  Object.keys(matSeen).forEach(id=>{ if(id.slice(0, id.lastIndexOf("_")) === mid){ delete matSeen[id]; chainWrite(id, ()=>matDel.add(mid), ()=>matRef.doc(id).delete()); } });
+}
+
+async function connect(){
+  let user = null, db = null;
+  try{
+    if(window.claude && window.claude.use){
+      try{ user = await window.claude.use("user"); }catch(e){}
+      try{ db = await window.claude.use("db"); }catch(e){}
+      try{ SAMPLE = await window.claude.use("sample"); }catch(e){}
+      if(SAMPLE){ try{ const l = await SAMPLE.limits(); IMGLIM = (l && l.images) || null; }catch(e){ IMGLIM = null; } }
+      if(user){
+        try{ ME.id = await user.id(); }catch(e){}
+        try{ ME.owner = !!(await user.isOwner()); }catch(e){}
+        try{ if(db && (await user.can("data.write")) === false) cloudBlocked = true; }catch(e){}
+        GUEST = !!db && !ME.owner;
+        if(GUEST && !(typeof ME.id === "string" && /^[A-Za-z0-9_.~:@+-]{1,150}$/.test(ME.id))) cloudBlocked = true;
+      }
+    }
+  }catch(e){}
+  READY = true;
+  if(ME.id){
+    const hadAnon = hasData() || M.length > 0, prevOut = OUT;
+    lsKey = LS_BASE + ":" + ME.id;
+    const had = loadLocal(lsKey);
+    OUT = {s:Object.assign({}, prevOut.s, OUT.s), f:Object.assign({}, prevOut.f, OUT.f), g:Object.assign({}, prevOut.g, OUT.g)};
+    if(!had && hadAnon){ persistLocal(); persistMats(); }
+  }
+  if(!db){
+    if(!hasData() && (ME.owner || !window.claude)){ seedOwner(); persistLocal(); }
+    setSync(); renderAll(); return;
+  }
+  stateRef = db.doc("progress/main");
+  sessRef = db.collection("sessions");
+  flagRef = db.collection("flags");
+  genRef = db.collection("gen");
+  qbankRef = db.doc("progress/qbank");
+  matRef = db.collection("materials");
+  DB = db;
+  if(GUEST && ME.id) watchGuest(ME.id);
+  db.collection("guests").onSnapshot(snap=>{
+    const ids = new Set(snap.docs.map(d=>d.id));
+    ids.forEach(watchGuest);
+    Object.keys(GU).forEach(g=>{ if(!ids.has(g) && g !== ME.id){ GU[g].un.forEach(u=>{ try{ u(); }catch(e){} }); delete GU[g]; } });
+    if(GUEST && ids.has(ME.id)){ gMarked = true; needMark = false; }
+    CL.ready.gl = true; settle(); derive(); renderAll();
+  }, ()=>{});
+  setSync();
+  stateRef.onSnapshot(snap=>{
+    CL.ready.m = true; CL.mainExists = snap.exists;
+    const d = snap.exists ? (snap.data() || {}) : {};
+    /* the first layout kept every test and flag inside this one record */
+    CL.ls = {}; (Array.isArray(d.attempts) ? d.attempts : []).forEach(a=>{ if(a && typeof a.id === "string" && Array.isArray(a.a) && typeof a.t === "number" && /^[A-Za-z0-9_.~:@+-]{1,150}$/.test(a.id)) CL.ls[a.id] = {t:a.t, a:a.a}; });
+    CL.lf = Array.isArray(d.flags) ? d.flags.filter(q=>typeof q === "string" && /^[A-Za-z0-9_.~:@+-]{1,150}$/.test(q)) : [];
+    if((Object.keys(CL.ls).length || CL.lf.length || Array.isArray(d.attempts)) && cloudOn() && !GUEST){
+      Object.keys(CL.ls).forEach(id=>{ if(!(id in OUT.s)) OUT.s[id] = CL.ls[id]; });
+      CL.lf.forEach(q=>{ if(!(q in OUT.f)) OUT.f[q] = true; });
+      mainLegacy = true; pushOut(); afterWrites();
+    }
+    if(snap.exists && Array.isArray(d.completed)){
+      applyMain(d);
+      lastMain = JSON.stringify({v:3, completed:S.completed.slice(), syl:clone(S.syl)});
+      if(!d.syl) writeMain(true);
+    }
+    derive(); maybeSeed(); renderAll();
+  }, ()=>{ setSync(); });
+  sessRef.onSnapshot(snap=>{
+    CL.s = {};
+    snap.docs.forEach(doc=>{ const d = doc.data(); if(d && Array.isArray(d.a) && typeof d.t === "number") CL.s[doc.id] = sBody(d); });
+    CL.ready.s = true; settle(); derive(); maybeSeed(); renderAll();
+  }, ()=>{});
+  flagRef.onSnapshot(snap=>{
+    CL.f = {}; snap.docs.forEach(doc=>{ CL.f[doc.id] = true; });
+    CL.ready.f = true; settle(); derive(); renderAll();
+  }, ()=>{});
+  genRef.onSnapshot(snap=>{
+    CL.g = {}; snap.docs.forEach(doc=>{ const d = doc.data(); if(d && Array.isArray(d.items)) CL.g[doc.id] = {at:d.at || 0, items:d.items}; });
+    Object.keys(OUT.g).forEach(id=>{ if(OUT.g[id] ? CL.g[id] : !CL.g[id]) delete OUT.g[id]; });
+    CL.ready.g = true; derive(); renderAll();
+  }, ()=>{});
+  qbankRef.onSnapshot(snap=>{
+    const d = snap.exists ? snap.data() : null;
+    CL.lg = d && Array.isArray(d.items) && d.items.length ? d.items : null;
+    if(CL.lg && cloudOn() && !GUEST && !CL.g.legacy && !("legacy" in OUT.g)){ OUT.g.legacy = {at:0, items:CL.lg}; pushOut(); }
+    if(CL.ready.g){ derive(); renderAll(); }
+  }, ()=>{});
+  let firstMat = true;
+  matRef.onSnapshot(snap=>{
+    const groups = {};
+    snap.docs.forEach(doc=>{ const d = doc.data(); if(!d || typeof d.mid !== "string") return; matSeen[doc.id] = JSON.stringify(d); (groups[d.mid] || (groups[d.mid] = [])).push(d); });
+    const next = [];
+    Object.keys(groups).forEach(mid=>{
+      if(JOB && JOB.mat && JOB.mat.id === mid){ next.push(JOB.mat); return; }
+      const ps = groups[mid].sort((a,b)=>(a.part||0)-(b.part||0)), h = ps[0];
+      const m = normMat({id:mid, name:h.name, u:h.u, subs:h.subs, at:h.at, pages:h.pages, status:h.status, note:h.note, how:h.how, pw:h.pw, qs:[].concat(...ps.map(p=>Array.isArray(p.qs) ? p.qs : []))});
+      if(m) next.push(m);
+    });
+    M.forEach(m=>{
+      if(groups[m.id]) return;
+      const active = JOB && JOB.mat && JOB.mat.id === m.id;
+      if(active || cloudBlocked || matRetry.has(m.id)){ next.push(m); return; }
+      if(firstMat && !GUEST){ next.push(m); saveMat(m); }   /* made on this phone before the shared record was reachable */
+    });
+    firstMat = false;
+    M = next.sort((a,b)=>a.at-b.at);
+    rebuildBank(); persistMats(); renderAll();
+  }, ()=>{});
+  window.addEventListener("online", ()=>{ syncErr = false; pushOut(); });
+  document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState === "visible" && outCount()) pushOut(); });
+  pushOut();
+  renderAll();
+}
+
+/* ---------- STATS ---------- */
+function stats(){
+  if(STV === VER && STC) return STC;
+  const per = {}, sessions = [], flagged = new Set(S.flags);
+  const attempts = S.attempts.slice().sort((a,b)=>a.t-b.t);
+  attempts.forEach((at, idx)=>{
+    let right = 0, total = 0; const byUnit = {};
+    at.a.forEach(pair=>{
+      const qid = pair[0], pick = pair[1], q = BY[qid];
+      if(!q || flagged.has(qid) || !isActiveQ(q)) return;
+      const ok = pick === q.a; total++; if(ok) right++;
+      const p = per[qid] || (per[qid] = {n:0,right:0,last:null,lastT:0,lastPick:null});
+      p.n++; if(ok) p.right++; p.last = ok; p.lastT = at.t; p.lastPick = pick;
+      const u = byUnit[q.u] || (byUnit[q.u] = {r:0,n:0}); u.n++; if(ok) u.r++;
+    });
+    sessions.push({idx: idx+1, at, right, total, byUnit});
+  });
+  const unit = {}, topic = {};
+  Object.keys(per).forEach(id=>{
+    const q = BY[id], p = per[id];
+    const u = unit[q.u] || (unit[q.u] = {n:0,r:0,seen:0});
+    u.n += p.n; u.r += p.right; u.seen++;
+    const k = q.u + "|" + q.s;
+    const t = topic[k] || (topic[k] = {u:q.u, s:q.s, n:0, r:0});
+    t.n += p.n; t.r += p.right;
+  });
+  const missed = Object.keys(per).filter(id=>per[id].last===false).sort((a,b)=>per[b].lastT-per[a].lastT);
+  let right = 0, total = 0; sessions.forEach(s=>{ right += s.right; total += s.total; });
+  const days = new Set(attempts.map(a=>dkey(a.t)));
+  let streak = 0; const d = new Date();
+  if(!days.has(dkey(d.getTime()))) d.setDate(d.getDate()-1);
+  while(days.has(dkey(d.getTime()))){ streak++; d.setDate(d.getDate()-1); }
+  STC = {per, sessions, unit, topic, missed, right, total, streak, days}; STV = VER;
+  return STC;
+}
+function statusOf(n, r){
+  if(n < 3) return {cls:"neutral", label:"Few answers"};
+  const p = pct(r, n);
+  if(p >= 90) return {cls:"good", label:"Strong"};
+  if(p >= 70) return {cls:"warn", label:"Steady"};
+  return {cls:"bad", label:"Revise"};
+}
+
+/* ---------- TABS ---------- */
+const TABS = ["dashboard","syllabus","materials","practice","history"];
+let TAB = "dashboard";
+try{ const h = (location.hash||"").slice(1); const m = localStorage.getItem(LS_TAB); TAB = TABS.includes(h) ? h : (TABS.includes(m) ? m : "dashboard"); }catch(e){}
+function showTab(t){
+  TAB = t;
+  document.querySelectorAll(".tab").forEach(b=>b.setAttribute("aria-selected", String(b.dataset.tab===t)));
+  document.querySelectorAll(".panel").forEach(p=>{ p.hidden = p.id !== "p-"+t; });
+  try{ localStorage.setItem(LS_TAB, t); }catch(e){}
+  try{ history.replaceState(null,"","#"+t); }catch(e){}
+  if(t==="history") renderHistory();
+  if(t==="dashboard") renderDashboard();
+  if(t==="practice") renderPractice();
+  if(t==="syllabus") renderSyllabus();
+  if(t==="materials") renderMaterials();
+  window.scrollTo({top:0});
+}
+
+/* ---------- SHARED CHART PIECES ---------- */
+function hbar(name, w, val, color, dot, extra){
+  return '<div class="hb"><div class="top2"><div class="nm">'+(dot?'<i class="udot" style="background:'+dot+'"></i>':"")+'<span class="t">'+esc(name)+'</span>'+(extra||"")+'</div><div class="val">'+esc(val)+'</div></div>'+
+    '<div class="track" data-tip="'+esc(name+": "+val)+'"><i style="width:'+Math.max(w,w>0?2:0)+'%;background:'+color+'"></i></div></div>';
+}
+
+/* ---------- SYLLABUS ---------- */
+const ED = {on:false, open:new Set()};
+let ARM = null; /* two-tap confirmations: {key, t} */
+function armed(key){ return ARM && ARM.key === key && Date.now() - ARM.t < 4000; }
+function arm(key, rerender){ ARM = {key, t:Date.now()}; setTimeout(()=>{ if(ARM && ARM.key === key){ ARM = null; rerender(); } }, 4100); rerender(); }
+function compUnits(){ return S.completed.filter(n=>{ const u = unitOf(n); return u && !u.off; }).sort((a,b)=>a-b); }
+
+function renderSyllabus(){
+  const st = stats(), lv = live();
+  const units = activeUnits(), done = compUnits().length;
+  const cards = units.map(u=>{
+    const on = S.completed.includes(u.n);
+    const qs = lv.filter(q=>q.u===u.n), nb = qs.length, nm = qs.filter(q=>q.m).length;
+    const ua = st.unit[u.n];
+    const subs = activeSubs(u), gone = u.subs.filter(s=>s.off);
+    const meta = [
+      nb ? '<span>'+plural(nb,"question")+' in bank'+(nm ? ' · <span class="matcount">'+nm+' from your materials</span>' : '')+'</span>' : '<span>No questions yet'+(SAMPLE?", Claude can write them":"")+'</span>',
+      ua ? '<span>'+pct(ua.r,ua.n)+'% correct · '+ua.r+'/'+ua.n+'</span>' : ''
+    ].join("");
+    const chips = subs.map(s=> ED.on
+      ? '<span class="chip ed">'+esc(s.name)+'<button class="x" data-act="rmsub" data-u="'+u.n+'" data-s="'+esc(s.id)+'" aria-label="Remove '+esc(s.name)+'">×</button></span>'
+      : '<span class="chip">'+esc(s.name)+'</span>').join("") || '<span class="hint">No sub-topics yet.</span>';
+    const editBits = ED.on ?
+      '<div class="addrow"><input class="txt" id="add-s-'+u.n+'" data-enter="addsub" data-u="'+u.n+'" maxlength="80" placeholder="Add a sub-topic" value="'+esc(DRAFT["add-s-"+u.n]||"")+'" aria-label="New sub-topic for '+esc(u.name)+'"><button class="btn small" data-act="addsub" data-u="'+u.n+'">Add</button></div>'+
+      (gone.length ? '<div class="restore"><span>Removed:</span>'+gone.map(s=>'<button data-act="rsub" data-u="'+u.n+'" data-s="'+esc(s.id)+'">Restore '+esc(s.name)+'</button>').join("")+'</div>' : '')
+      : '';
+    const open = ED.on || ED.open.has(u.n);
+    return '<article class="ucard'+(on?" on":"")+'">'+
+      '<div class="uhead"><div class="l"><span class="roman">'+roman(u.n)+'</span><div><div class="uname">'+esc(u.name)+'</div><div class="umeta">'+meta+'</div></div></div>'+
+      '<label class="switch"><input type="checkbox" data-unit="'+u.n+'"'+(on?" checked":"")+' aria-label="Mark '+esc(u.name)+' as completed"><span class="trk"></span><span>'+(on?"Completed":"Not yet")+'</span></label></div>'+
+      '<details class="tp" data-tp="'+u.n+'"'+(open?" open":"")+'><summary>Sub-topics ('+subs.length+')</summary><div class="chips">'+chips+'</div>'+editBits+'</details>'+
+      '<div class="ufoot"><button class="linkish" data-act="upmat" data-u="'+u.n+'">Upload material</button>'+
+      (ED.on ? '<button class="linkish danger" data-act="rmunit" data-u="'+u.n+'">'+(armed("rmunit"+u.n) ? "Tap again to remove this topic" : "Remove topic")+'</button>' : '')+'</div>'+
+    '</article>';
+  }).join("");
+  const addCard = ED.on ? '<article class="ucard add"><div class="uname">Add a topic</div><p class="hint">For anything your institute covers that is not in the list. Add its sub-topics after.</p><div class="addrow"><input class="txt" id="add-u" data-enter="addunit" maxlength="80" placeholder="Topic name" value="'+esc(DRAFT["add-u"]||"")+'" aria-label="New topic name"><button class="btn small" data-act="addunit">Add topic</button></div></article>' : '';
+  const goneU = S.syl.units.filter(u=>u.off);
+  $("#p-syllabus").innerHTML =
+    '<div class="sec-head"><div><h2>Syllabus</h2><p class="sub">Switch on each topic as you finish it. Practice questions come only from completed topics. '+(ED.on ? "Remove sub-topics you don’t need, or add your own." : "Use Edit to add topics and sub-topics or remove ones you don’t need.")+'</p></div>'+
+    '<div class="sec-tools"><div class="prog"><div class="prog-num">'+done+'<small>of '+units.length+' topics completed</small></div><div class="bar"><i style="width:'+pct(done, units.length)+'%"></i></div></div>'+
+    '<button class="btn'+(ED.on?" primary":"")+'" data-act="edsyl">'+(ED.on ? "Done editing" : "Edit syllabus")+'</button></div></div>'+
+    '<div class="unit-grid">'+cards+addCard+'</div>'+
+    (goneU.length ? '<div class="restore" style="margin-top:16px"><span>Removed topics:</span>'+goneU.map(u=>'<button data-act="runit" data-u="'+u.n+'">Restore '+esc(u.name)+'</button>').join("")+'</div>' : '')+
+    '<div class="sheet" style="margin-top:18px"><div class="card-title"><h3>Paper pattern from the two papers you shared</h3></div>'+
+    '<div class="pattern"><div><h4>TRB PG 2025 (code ZX-25:ZPX4/A)</h4><ul><li>180 questions in the version shared, English and Tamil</li><li>Q31–Q140: Physics (110)</li><li>Q141–Q170: Education and psychology (30)</li><li>Q171–Q180: General (10)</li><li>Formats seen: direct recall, numerical, assertion–reason, statement combinations, match the following</li><li>No official answer key was supplied</li></ul></div>'+
+    '<div><h4>TRB PG 2019, Physics (tentative key)</h4><ul><li>150 questions</li><li>Q1–Q110: Physics</li><li>Q111–Q121: General knowledge</li><li>Q122–Q150: Education and psychology</li><li>Keys are tentative, so treat a doubtful answer with care</li></ul></div></div></div>';
+}
+function sylChanged(){ indexSyl(); P.sel = null; rebuildBank(); save(); renderAll(); }
+function addSub(n){
+  const u = unitOf(n); if(!u) return;
+  const id = "add-s-"+n, el = $("#"+id), name = ((el && el.value) || DRAFT[id] || "").trim().replace(/\s+/g," ");
+  if(!name){ toast("Type a sub-topic name first"); return; }
+  const same = u.subs.find(s=>s.name.toLowerCase() === name.toLowerCase());
+  if(same && !same.off){ toast("“"+name+"” is already listed"); return; }
+  if(same) delete same.off; else u.subs.push({id:"c"+rid(), name:name.slice(0,80), custom:true});
+  DRAFT[id] = "";
+  sylChanged();
+  const again = $("#"+id); if(again) again.focus();
+}
+function rmSub(n, sid){
+  const u = unitOf(n), s = u && u.subs.find(x=>x.id===sid); if(!s) return;
+  const hid = live().filter(q=>q.s===sid).length;
+  s.off = true; sylChanged();
+  toast(hid ? "Removed “"+short(s.name,40)+"”. Its "+plural(hid,"question")+" are hidden from practice." : "Removed “"+short(s.name,40)+"”.");
+}
+function addUnit(){
+  const el = $("#add-u"), name = ((el && el.value) || DRAFT["add-u"] || "").trim().replace(/\s+/g," ");
+  if(!name){ toast("Type a topic name first"); return; }
+  const same = S.syl.units.find(u=>u.name.toLowerCase() === name.toLowerCase());
+  if(same && !same.off){ toast("“"+name+"” is already a topic"); return; }
+  let n;
+  if(same){ delete same.off; n = same.n; }
+  else { n = Math.max(10, ...S.syl.units.map(u=>u.n)) + 1; if(n > 99){ toast("That is the most topics this tracker can hold"); return; } S.syl.units.push({n, name:name.slice(0,80), subs:[], custom:true}); }
+  DRAFT["add-u"] = "";
+  sylChanged();
+  toast("Added “"+short(name,40)+"”. Add its sub-topics in its card.");
+  const inp = $("#add-s-"+n); if(inp){ inp.focus(); inp.scrollIntoView({block:"center"}); }
+}
+function rmUnit(n){
+  const u = unitOf(n); if(!u) return;
+  u.off = true; S.completed = S.completed.filter(x=>x!==n);
+  if(UP.u === n) UP.u = null;
+  ARM = null; sylChanged();
+  toast("Removed “"+short(u.name,40)+"”. You can restore it at the bottom of this page.");
+}
+
+/* ---------- PRACTICE ---------- */
+const srcOk = q => P.src==="all" || (P.src==="material" ? !!q.m : P.src==="pyq" ? isPyq(q) : (!q.m && !isPyq(q)));
+const tierOf = q => q.m ? 0 : isPyq(q) ? 1 : 2;
+function scopeUnits(){ const lv = live(); return compUnits().filter(n=>SAMPLE || lv.some(q=>q.u===n)); }
+function ensureSel(){
+  const ok = scopeUnits();
+  if(!P.sel){ P.sel = new Map(); ok.forEach(n=>P.sel.set(n, new Set(activeSubs(unitOf(n)).map(s=>s.id)))); return ok; }
+  [...P.sel.keys()].forEach(n=>{ if(!ok.includes(n)) P.sel.delete(n); });
+  P.sel.forEach((set, n)=>{ const act = new Set(activeSubs(unitOf(n)).map(s=>s.id)); P.sel.set(n, new Set([...set].filter(id=>act.has(id)))); });
+  return ok;
+}
+function inScope(q){ const s = P.sel && P.sel.get(q.u); return !!s && s.has(q.s); }
+function scopePool(u){ return live().filter(q=>q.u===u && inScope(q) && srcOk(q)); }
+function selUnits(){ return P.sel ? [...P.sel.keys()].filter(n=>P.sel.get(n).size).sort((a,b)=>a-b) : []; }
+function needGen(u){
+  if(!SAMPLE || !(P.src==="all" || P.src==="bank") || !(P.order==="priority" || P.order==="mix")) return 0;
+  if(!P.sel || !P.sel.get(u) || !P.sel.get(u).size) return 0;
+  const st = stats();
+  const fresh = scopePool(u).filter(q=>!st.per[q.id]).length;
+  return Math.max(0, P.per - fresh);
+}
+/* Interleave sub-topics so one sub-topic does not fill the whole set. */
+function spread(list){
+  const by = new Map(); list.forEach(q=>{ if(!by.has(q.s)) by.set(q.s, []); by.get(q.s).push(q); });
+  const lanes = shuffle([...by.values()]), out = [];
+  for(let i=0; out.length < list.length; i++) lanes.forEach(l=>{ if(i < l.length) out.push(l[i]); });
+  return out;
+}
+function buildSession(){
+  const st = stats(), per = st.per, used = new Set();
+  const fresh = q => !per[q.id] ? 0 : (per[q.id].last===false ? 1 : 2);
+  let items = [];
+  selUnits().forEach(u=>{
+    const pool = scopePool(u), chosen = [];
+    const take = q => {
+      if(chosen.length >= P.per || chosen.includes(q)) return false;
+      const k = pkey(q); if(k && used.has(k)) return false;
+      chosen.push(q); if(k) used.add(k); return true;
+    };
+    const unseen = shuffle(pool.filter(q=>fresh(q)===0));
+    const missed = shuffle(pool.filter(q=>fresh(q)===1));
+    const seen = pool.filter(q=>fresh(q)===2).sort((a,b)=>per[a.id].lastT-per[b.id].lastT);
+    if(P.order==="missed") spread(missed).forEach(take);
+    else if(P.order==="random") shuffle(pool).forEach(take);
+    else if(P.order==="priority"){
+      /* materials, then previous-year, then the rest; new before missed within each, repeats last */
+      [0,1,2].forEach(t=>{ spread(unseen.filter(q=>tierOf(q)===t)).forEach(take); spread(missed.filter(q=>tierOf(q)===t)).forEach(take); });
+      [0,1,2].forEach(t=>seen.filter(q=>tierOf(q)===t).forEach(take));
+    } else {
+      missed.slice(0, Math.min(2, Math.ceil(P.per/4))).forEach(take);
+      if(P.src==="all"){ const cap = Math.ceil(P.per/3); let c = 0; unseen.filter(isPyq).concat(seen.filter(isPyq)).forEach(q=>{ if(c < cap && take(q)) c++; }); }
+      spread(unseen).concat(missed, seen).forEach(take);
+    }
+    items = items.concat(shuffle(chosen));
+  });
+  return items.map(q=>({q, perm: shuffle(q.o.map((_,k)=>k))}));
+}
+function sessionCount(){
+  const items = buildSession(); let n = 0;
+  selUnits().forEach(u=>{ n += needGen(u) > 0 ? P.per : items.filter(x=>x.q.u===u).length; });
+  return n;
+}
+function renderPractice(){
+  if(P.view==="quiz") renderQuiz();
+  else if(P.view==="results") renderResults();
+  else if(P.view==="loading") renderLoading();
+  else renderSetup();
+}
+function renderSetup(){
+  const ok = ensureSel();
+  const st = stats(), lv = live();
+  const comp = compUnits();
+  const scopes = comp.map(n=>{
+    const u = unitOf(n), subs = activeSubs(u), sel = P.sel.get(n) || new Set(), can = ok.includes(n);
+    const inSrc = lv.filter(q=>q.u===n && srcOk(q));
+    const nSel = inSrc.filter(q=>sel.has(q.s)).length;
+    const state = !sel.size ? "none" : sel.size >= subs.length ? "all" : "some";
+    const open = P.open.has(n) && can && subs.length;
+    const has = lv.some(q=>q.u===n);
+    const note = has ? "" : (SAMPLE ? " (Claude will write them)" : " (no questions yet)");
+    const subsHtml = open ? '<div class="scope-subs">'+subs.map(s=>{ const c = inSrc.filter(q=>q.s===s.id).length; return '<label class="sel sm"><input type="checkbox" data-ss="'+esc(s.id)+'" data-u="'+n+'"'+(sel.has(s.id)?" checked":"")+'><span>'+esc(s.name)+'<em class="cnt">'+c+'</em></span></label>'; }).join("")+
+      '<div class="mini"><button class="linkish" data-act="ssall" data-u="'+n+'">Select all</button><button class="linkish" data-act="ssnone" data-u="'+n+'">Clear</button></div></div>' : '';
+    return '<div class="scope"><div class="scope-h"><label class="sel"><input type="checkbox" data-su="'+n+'" data-state="'+state+'"'+(state==="all"?" checked":"")+(can?"":" disabled")+'><span><i class="udot" style="background:'+ucolor(n)+'"></i>'+esc(u.name)+note+(can?'<em class="cnt">'+nSel+'</em>':'')+'</span></label>'+
+      (can && subs.length ? '<button class="linkish" data-act="subs" data-u="'+n+'" aria-expanded="'+(open?"true":"false")+'">'+(state==="all" ? "All "+subs.length+" sub-topics" : sel.size+" of "+subs.length+" sub-topics")+(open?" ▴":" ▾")+'</button>' : '')+
+      '</div>'+subsHtml+'</div>';
+  }).join("");
+  const nMissed = st.missed.filter(id=>BY[id] && inScope(BY[id])).length;
+  const unseen = selUnits().reduce((s,u)=>s + scopePool(u).filter(q=>!st.per[q.id]).length, 0);
+  const total = sessionCount();
+  const gens = selUnits().filter(u=>needGen(u)>0);
+  const radio = (name, val, cur, label) => '<label class="sel"><input type="radio" name="'+name+'" value="'+val+'"'+(String(cur)===String(val)?" checked":"")+'><span>'+label+'</span></label>';
+  const orderHint = {
+    priority:"Questions from your materials come first, then previous-year questions, then the rest of the bank. New questions come before earlier misses, and repeats come last.",
+    mix:"New questions from every source, with a few previous-year questions and a couple of earlier misses mixed in.",
+    missed:"Only questions whose latest answer was wrong.",
+    random:"A random draw from everything in your selection."
+  }[P.order];
+  const matN = lv.filter(q=>q.m && inScope(q)).length;
+  const genNote = gens.length ? '<div class="notice">Fewer than '+P.per+' unasked questions are left for '+gens.map(u=>esc(uname(u))).join(", ")+'. Claude will write new ones when you start. They are saved to your bank.</div>' : "";
+  const noGen = (!SAMPLE && READY) ? '<p class="hint">Claude doesn’t run on this site, so questions come from the bank and the materials added here.</p>' : "";
+  $("#p-practice").innerHTML =
+    '<div class="sec-head"><div><h2>Practice</h2><p class="sub">Questions from the topics you have completed: your uploaded materials, real questions from the 2019 paper, and the practice bank.</p></div></div>'+
+    (ok.length ? '' : '<div class="empty" style="margin-bottom:16px">No completed topic has questions yet. Mark a topic as completed on the Syllabus tab, or upload its material on the Materials tab.</div>')+
+    '<div class="sheet">'+
+      '<div class="setup-row"><div class="lbl">Topics and sub-topics</div>'+(scopes ? '<div class="scopes">'+scopes+'</div><p class="hint">Tick a whole topic, or open its sub-topics to pick only the ones you need. Numbers show the questions available.</p>' : '<span class="hint">No completed topics.</span>')+'</div>'+
+      '<div class="setup-row"><div class="lbl">Questions from</div><div class="optrow">'+radio("src","all",P.src,"Everything")+radio("src","material",P.src,"My materials ("+matN+")")+radio("src","pyq",P.src,"Previous-year")+radio("src","bank",P.src,"Practice bank")+'</div></div>'+
+      '<div class="setup-row"><div class="lbl">Order</div><div class="optrow">'+radio("order","priority",P.order,"Materials first")+radio("order","mix",P.order,"Even mix")+radio("order","missed",P.order,"Missed only ("+nMissed+")")+radio("order","random",P.order,"Anything")+'</div>'+
+      '<p class="hint">'+orderHint+' '+unseen+' not asked yet in this selection.</p></div>'+
+      '<div class="setup-row"><div class="lbl">Questions per topic</div><div class="optrow">'+[3,5,10,20].map(n=>radio("per",n,P.per,n)).join("")+'</div></div>'+
+      '<div class="setup-row"><div class="lbl">Feedback</div><div class="optrow">'+radio("fb","instant",P.fb,"After each answer")+radio("fb","exam",P.fb,"At the end (exam mode)")+'</div></div>'+
+      genNote+noGen+
+      '<div class="setup-row"><label class="lbl" for="who">Your name</label><input class="txt" id="who" autocomplete="name" maxlength="60" placeholder="So History shows whose test it was" value="'+esc(WHO)+'"></div>'+
+      '<div class="start-row"><button class="btn primary" data-act="start"'+(total?"":" disabled")+'>Start '+plural(total,"question")+'</button>'+
+      (SAMPLE && (P.src==="all"||P.src==="bank") && selUnits().length ? '<button class="btn" data-act="more">Ask Claude for more</button>' : "")+
+      (total?'':'<span class="hint">Nothing to practise with these settings.</span>')+'</div>'+
+    '</div>';
+  document.querySelectorAll('#p-practice [data-state="some"]').forEach(el=>{ el.indeterminate = true; });
+}
+function renderLoading(){
+  $("#p-practice").innerHTML =
+    '<div class="sheet"><div class="loading" aria-live="polite"><div class="spin" aria-hidden="true"></div><h3>'+esc(P.loadMsg||"Working…")+'</h3>'+
+    '<p class="sub">This can take up to a minute. The first time, you are asked to let this page use Claude. New questions are written by Claude and not checked by anyone else, so use Flag if one looks wrong.</p>'+
+    '<button class="btn" data-act="cancelgen">Cancel</button></div></div>';
+}
+/* ----- asking Claude for new questions ----- */
+function parseJsonArray(text){
+  const a = text.indexOf("["), b = text.lastIndexOf("]");
+  if(a < 0 || b <= a) return [];
+  try{ const v = JSON.parse(text.slice(a, b+1)); return Array.isArray(v) ? v : []; }catch(e){ return []; }
+}
+function cleanOpts(x){
+  if(!x || typeof x.q!=="string" || !Array.isArray(x.o) || x.o.length!==4) return null;
+  const o = x.o.map(s=>String(s==null ? "" : s).trim());
+  if(o.some(s=>!s || s.length > 300)) return null;
+  if(new Set(o.map(s=>s.toLowerCase())).size !== 4) return null;
+  const a = Number(x.a); if(!Number.isInteger(a) || a<0 || a>3) return null;
+  const q = x.q.trim(), w = String(x.w||"").trim(), r = String(x.r||"").trim();
+  if(!q || !w || !r || q.length > 900 || w.length > 900 || r.length > 500) return null;
+  return {q, o, a, w, r};
+}
+function cleanGen(arr, unitN, codes){
+  const seen = new Set(live().map(q=>normQ(q.q)));
+  const out = [];
+  arr.forEach((x, i)=>{
+    const c = cleanOpts(x); if(!c) return;
+    const nq = normQ(c.q); if(seen.has(nq)) return; seen.add(nq);
+    const hit = codes.find(k=>k.c === String(x.s||"").trim());
+    out.push(Object.assign({id:"g"+Date.now().toString(36)+i+Math.random().toString(36).slice(2,5), u:unitN, s:(hit || codes[0]).id}, c, {gen:true}));
+  });
+  return out;
+}
+async function generateFor(u, n){
+  const unit = unitOf(u), st = stats();
+  if(ensureGeneralSub(u)){ rebuildBank(); save(); }
+  const sel = P.sel && P.sel.get(u);
+  const subs = activeSubs(unit).filter(s=>!sel || !sel.size || sel.has(s.id));
+  const codes = subs.map((s,i)=>({c:"s"+(i+1), id:s.id, name:s.name}));
+  const pool = live().filter(q=>q.u===u && subs.some(s=>s.id===q.s));
+  const exhausted = codes.filter(k=>{ const qs = pool.filter(q=>q.s===k.id); return qs.length && qs.every(q=>st.per[q.id]); });
+  const existing = pool.slice(-70).map(q=>"- "+q.q.slice(0,150)).join("\n") || "(none yet)";
+  const prompt =
+"You write multiple-choice practice questions for the Tamil Nadu TRB Post Graduate Assistant (Physics) recruitment exam.\n\n"+
+"Topic: "+unit.name+"\nSub-topics to cover, with the code to put in \"s\":\n"+codes.map(k=>k.c+" = "+k.name).join("\n")+"\n\n"+
+"Write exactly "+n+" NEW questions at recall level: definitions, standard formulas, basic statements, standard constants and well-known results. No figures, no long calculations. Spread them across the sub-topics listed.\n"+
+"Rules:\n- Four options, exactly one correct. Wrong options must be plausible but clearly wrong to an expert.\n- Only write a question if you are certain of the answer from standard textbooks. If unsure, write a different question.\n- Use Unicode for symbols and formulas (for example ħ, ∇, ², ₀).\n- Do not repeat or closely paraphrase any of these existing questions:\n"+existing+"\n"+
+(exhausted.length ? "- Give extra weight to these sub-topics, where the student has answered every question: "+exhausted.map(k=>k.c).join(", ")+"\n" : "")+
+"\nReply with a JSON array only, no other text, no code fence. Each item: {\"q\": question, \"o\": [four option strings], \"a\": index 0-3 of the correct option, \"w\": one or two sentences saying why it is correct, \"r\": one short rule worth remembering, \"s\": sub-topic code}.";
+  P.ctl = new AbortController();
+  const res = await SAMPLE(prompt, {signal:P.ctl.signal, cache:false, modelTier:"default"});
+  const clean = cleanGen(parseJsonArray(res.text || ""), u, codes);
+  if(!clean.length) throw {code:"empty", message:"No usable questions came back"};
+  addGen(clean);
+  return clean.length;
+}
+function genErr(e){
+  const c = e && e.code;
+  toast(c==="not_granted" ? "Claude access was not allowed. Using the questions you already have."
+    : c==="rate_limited" ? "Too many requests just now. Try again in a minute."
+    : c==="full" ? "Your saved list of written questions is full."
+    : c==="empty" ? "Claude did not return usable questions this time."
+    : "Could not reach Claude. Using the questions you already have.");
+}
+async function topUp(force){
+  let added = 0;
+  for(const u of selUnits()){
+    const n = force ? 5 : needGen(u);
+    if(!n) continue;
+    P.loadMsg = "Asking Claude to write new "+uname(u)+" questions…"; renderPractice();
+    try{ added += await generateFor(u, Math.min(10, Math.max(n, 5))); }
+    catch(e){ if(e && e.code==="cancelled") throw e; genErr(e); break; }
+  }
+  return added;
+}
+async function startQuiz(){
+  if(P.busy) return; P.busy = true;
+  try{
+    if(selUnits().some(u=>needGen(u)>0)){
+      P.view = "loading"; P.loadMsg = "Asking Claude for fresh questions…"; renderPractice();
+      try{ const n = await topUp(false); if(n) toast(plural(n,"new question")+" added to your bank"); }
+      catch(e){ P.view = "setup"; renderPractice(); return; }
+    }
+    const items = buildSession();
+    if(!items.length){ P.view = "setup"; renderPractice(); toast("Nothing to practise with these settings"); return; }
+    P.items = items; P.i = 0; P.picks = []; P.view = "quiz"; P.quitArm = false;
+    renderPractice(); window.scrollTo({top:0});
+  } finally { P.busy = false; }
+}
+async function askMore(){
+  if(P.busy) return; P.busy = true;
+  try{
+    P.view = "loading"; P.loadMsg = "Asking Claude for more questions…"; renderPractice();
+    try{ const n = await topUp(true); if(n) toast(plural(n,"new question")+" added to your bank"); }
+    catch(e){}
+    P.view = "setup"; renderPractice();
+  } finally { P.busy = false; }
+}
+/* ----- the quiz ----- */
+function renderQuiz(){
+  const it = P.items[P.i], q = it.q;
+  const picked = P.picks[P.i];
+  const instant = P.fb==="instant";
+  const reveal = instant && picked!==undefined;
+  const last = P.i === P.items.length-1;
+  const ticks = P.items.map((x,j)=>{
+    let c = "";
+    if(j===P.i) c = "cur";
+    else if(j<P.i) c = instant ? (P.picks[j]===x.q.a ? "ok" : "no") : "done";
+    return '<i class="'+c+'"></i>';
+  }).join("");
+  const opts = it.perm.map((k,d)=>{
+    let cls = "opt";
+    if(reveal) cls += k===q.a ? " correct" : (k===picked ? " wrong" : " dim");
+    else if(picked===k) cls += " selected";
+    return '<button class="'+cls+'" data-act="pick" data-k="'+k+'"'+(reveal?" disabled":"")+'><span class="bub">'+(reveal && k===q.a ? "✓" : (reveal && k===picked ? "✕" : LETTERS[d]))+'</span><span class="tx">'+esc(q.o[k])+'</span></button>';
+  }).join("");
+  let fb = "";
+  if(reveal){
+    const ok = picked === q.a;
+    const dispLetter = LETTERS[it.perm.indexOf(q.a)];
+    fb = '<div class="verdict '+(ok?"ok":"no")+'" aria-live="polite"><b class="v">'+(ok?"Correct":"Not quite. The answer is ("+dispLetter+")")+'</b><div>'+esc(q.w)+'</div>'+mkNote(q)+'<div class="remember"><span class="lbl">Remember</span>'+esc(q.r)+'</div>'+
+      '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">'+pyqTag(q.p)+srcChip(q)+'<button class="linkish flagb" data-act="flag" data-id="'+esc(q.id)+'">Flag this question as wrong</button></div></div>';
+  }
+  $("#p-practice").innerHTML =
+    '<div class="qhead"><div class="l"><span class="mono muted">Question '+(P.i+1)+' of '+P.items.length+'</span>'+unitChip(q.u,q.s)+(reveal?"":srcChip(q))+'</div>'+
+    '<button class="linkish" data-act="quit">'+(P.quitArm?"Tap again to quit without saving":"Quit")+'</button></div>'+
+    '<div class="ticks" aria-hidden="true">'+ticks+'</div>'+
+    '<div class="sheet"><div class="qtext">'+esc(q.q)+'</div><div class="opts" role="group" aria-label="Answer options">'+opts+'</div>'+fb+
+    '<div class="qnav"><span class="hint">Keys: A–D to answer, Enter for next</span>'+
+    '<button class="btn primary" data-act="next"'+(picked===undefined?" disabled":"")+'>'+(last?"Finish":"Next")+'</button></div></div>';
+}
+function pick(k){
+  if(P.view!=="quiz") return;
+  if(P.fb==="instant" && P.picks[P.i]!==undefined) return;
+  P.picks[P.i] = k; P.quitArm = false;
+  renderQuiz();
+}
+function next(){
+  if(P.picks[P.i]===undefined) return;
+  if(P.i < P.items.length-1){ P.i++; P.quitArm = false; renderQuiz(); window.scrollTo({top:0}); return; }
+  finish();
+}
+let quitTimer = null;
+function quit(){
+  if(!P.quitArm){ P.quitArm = true; renderQuiz(); clearTimeout(quitTimer); quitTimer = setTimeout(()=>{ if(P.view==="quiz"){ P.quitArm = false; renderQuiz(); } }, 3500); return; }
+  P.view = "setup"; P.quitArm = false; renderPractice();
+}
+function finish(){
+  const attempt = {id:"a"+Date.now()+Math.random().toString(36).slice(2,5), t:Date.now(), a:P.items.map((it,j)=>[it.q.id, P.picks[j]])};
+  const who = (WHO || (window.HOST && window.HOST.owner && window.HOST.user && window.HOST.user.displayName) || "").trim().slice(0,60);
+  if(who) attempt.n = who;
+  addSession(attempt);
+  P.result = attempt; P.view = "results";
+  renderPractice(); window.scrollTo({top:0});
+  toast("Session saved");
+}
+function flagQ(id){
+  if(S.flags.indexOf(id) >= 0) return;
+  setFlags([id], true);
+  toast("Flagged. It will not appear in future sessions.");
+}
+function reviewItem(qid, pick){
+  const q = BY[qid]; if(!q) return "";
+  const ok = pick === q.a;
+  const canFlag = (q.gen || q.m) && S.flags.indexOf(q.id) < 0;
+  return '<div class="ritem '+(ok?"ok":"no")+'"><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><span class="pill '+(ok?"good":"bad")+'">'+(ok?"Correct":"Wrong")+'</span>'+unitChip(q.u,q.s)+srcChip(q)+'</div>'+
+    '<div class="q">'+esc(q.q)+'</div>'+
+    '<div class="ans">'+(ok ? "Your answer: "+esc(q.o[q.a]) : "You picked: <b>"+esc(q.o[pick])+"</b><br>Correct: <b>"+esc(q.o[q.a])+"</b>")+'</div>'+
+    (ok ? "" : '<div>'+esc(q.w)+'</div>'+mkNote(q)+'<div class="remember"><span class="lbl">Remember</span>'+esc(q.r)+'</div>')+
+    '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">'+pyqTag(q.p)+(canFlag ? '<button class="linkish flagb" data-act="flag" data-id="'+esc(q.id)+'">Flag as wrong</button>' : "")+'</div></div>';
+}
+function sessionSummary(at){
+  const byU = {}; let r = 0;
+  at.a.forEach(([id,pk])=>{ const q = BY[id]; if(!q) return; const ok = pk===q.a; if(ok) r++; const u = byU[q.u] || (byU[q.u]={r:0,n:0}); u.n++; if(ok) u.r++; });
+  const n = at.a.filter(([id])=>BY[id]).length;
+  const lines = ["TRB Physics practice · "+(at.n ? at.n+" · " : "")+fmtDate(at.t)+", "+fmtTime(at.t), "Score: "+r+"/"+n+" ("+pct(r,n)+"%)", Object.keys(byU).map(k=>uname(+k)+" "+byU[k].r+"/"+byU[k].n).join(" · ")];
+  const wrong = at.a.filter(([id,pk])=>BY[id] && pk!==BY[id].a);
+  if(wrong.length){ lines.push("", "Missed:"); wrong.forEach(([id,pk])=>{ const q = BY[id]; lines.push("- ["+uname(q.u)+" · "+subName(q.s)+"] "+q.q+" | picked: "+q.o[pk]+" | correct: "+q.o[q.a]); }); }
+  return lines.join("\n");
+}
+function renderResults(){
+  const at = P.result;
+  let r = 0; const byU = {};
+  at.a.forEach(([id,pk])=>{ const q = BY[id]; if(!q) return; const ok = pk===q.a; if(ok) r++; const u = byU[q.u] || (byU[q.u]={r:0,n:0}); u.n++; if(ok) u.r++; });
+  const n = at.a.length;
+  const ubreak = Object.keys(byU).map(k=>{ const u = byU[k]; return hbar(uname(+k), pct(u.r,u.n), u.r+"/"+u.n+" · "+pct(u.r,u.n)+"%", ucolor(+k), ucolor(+k)); }).join("");
+  const wrongs = at.a.filter(([id,pk])=>BY[id] && pk!==BY[id].a);
+  const note = wrongs.length===0 ? "Clean sheet. Nothing to add to your revision list." : wrongs.length+" to revise. They now appear under Things to remember in History.";
+  $("#p-practice").innerHTML =
+    blockedNote()+'<div class="sec-head"><div><h2>Session complete</h2><p class="sub">'+esc(note)+'</p></div></div>'+
+    '<div class="sheet"><div class="res-top"><div class="score-big">'+r+'<small>/ '+n+' · '+pct(r,n)+'%</small></div><div class="ubreak hbars">'+ubreak+'</div></div>'+
+    '<div class="start-row"><button class="btn primary" data-act="again">Practise again</button><button class="btn" data-go="dashboard">Open dashboard</button><button class="btn" data-go="history">See history</button><button class="btn" data-act="copysum">Copy session summary</button></div></div>'+
+    '<div class="sheet"><div class="card-title"><h3>Review</h3><span class="note">Wrong answers first</span></div><div class="review">'+
+    wrongs.map(([id,pk])=>reviewItem(id,pk)).join("")+
+    at.a.filter(([id,pk])=>BY[id] && pk===BY[id].a).map(([id,pk])=>reviewItem(id,pk)).join("")+'</div></div>';
+}
+
+/* ---------- MATERIALS ---------- */
+const LIB = {
+  pdf: "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js",
+  pdfw: "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js",
+  zip: "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"
+};
+const scriptP = {};
+function loadScript(src){
+  return scriptP[src] || (scriptP[src] = new Promise((res, rej)=>{
+    const s = document.createElement("script"); s.src = src; s.async = true;
+    s.onload = ()=>res(); s.onerror = ()=>{ delete scriptP[src]; s.remove(); rej(new Error("A reading library could not be loaded. Check the connection and try again.")); };
+    document.head.appendChild(s);
+  }));
+}
+async function getPdfjs(){
+  /* Loading the worker script into the page lets pdf.js run without a separate worker. */
+  await loadScript(LIB.pdf); await loadScript(LIB.pdfw);
+  const lib = window.pdfjsLib; if(!lib) throw new Error("The PDF reader could not start.");
+  lib.GlobalWorkerOptions.workerSrc = LIB.pdfw;
+  return lib;
+}
+async function zipOpen(file){ await loadScript(LIB.zip); return window.JSZip.loadAsync(await file.arrayBuffer()); }
+
+const UP = {u:null, subs:null, files:[], pages:"", pics:false, done:true};
+let JOB = null;
+const MATOPEN = new Set(), MATALL = new Set();
+const CHUNK = 7000, NOTES_PER = 6, MAX_PAGES = 150, CONC = 2;
+const isImageFile = f => /^image\//.test(f.type) || /\.(jpe?g|png|webp|gif|heic|heif)$/i.test(f.name);
+const isPdf = f => f.type === "application/pdf" || /\.pdf$/i.test(f.name);
+const extOf = f => ((f.name.match(/\.([a-z0-9]+)$/i) || [])[1] || "").toLowerCase();
+
+function upUnit(){
+  const act = activeUnits();
+  if(!UP.u || !act.some(u=>u.n===UP.u)){
+    const comp = compUnits(), noMat = comp.filter(n=>!M.some(m=>m.u===n));
+    UP.u = noMat[0] || comp[0] || (act[0] && act[0].n) || null;
+    UP.subs = null;
+  }
+  return UP.u;
+}
+function parseRange(str, max){
+  const s = String(str||"").trim().replace(/\s*(?:[-–—]|to)\s*/gi, "-");
+  if(!s) return Array.from({length:max}, (_,i)=>i+1);
+  const out = new Set();
+  s.split(/[,;\s]+/).forEach(tok=>{
+    if(!tok) return;
+    const m = tok.match(/^(\d+)(?:-(\d+))?$/);
+    if(!m) throw new Error("Write pages as numbers and ranges, for example 1-12, 15.");
+    let a = +m[1], b = m[2] ? +m[2] : a; if(a > b) [a, b] = [b, a];
+    for(let i = Math.max(1, a); i <= Math.min(max, b); i++) out.add(i);
+  });
+  return [...out].sort((a,b)=>a-b);
+}
+function pagesLabel(pgs, word){
+  word = word || "page";
+  const a = [...new Set(pgs)].sort((x,y)=>x-y); if(!a.length) return "";
+  const rs = []; let s = a[0], p = a[0];
+  for(let i = 1; i <= a.length; i++){ if(a[i] === p+1){ p = a[i]; continue; } rs.push(s===p ? ""+s : s+"–"+p); s = a[i]; p = a[i]; }
+  return (a.length===1 ? word : word+"s")+" "+rs.join(", ");
+}
+function cutAt(t, n){
+  if(t.length <= n) return t.length;
+  let i = t.lastIndexOf("\n", n); if(i > n*0.5) return i+1;
+  i = t.lastIndexOf(". ", n); if(i > n*0.5) return i+2;
+  return n;
+}
+/* pages: [{pg, text}] → text parts of about CHUNK characters, each starting with a page marker */
+function textParts(pages, word){
+  const list = []; let cur = null;
+  const mark = pg => pg ? "\n["+word+" "+pg+"]\n" : "\n";
+  const flush = ()=>{ if(cur && cur.text.trim()) list.push(cur); cur = null; };
+  pages.forEach(p=>{
+    let t = String(p.text||"").trim(), cont = false;
+    while(t.length){
+      if(!cur) cur = {kind:"text", text:"", pgs:[]};
+      const head = cont && p.pg ? "\n["+word+" "+p.pg+", continued]\n" : mark(p.pg);
+      const room = CHUNK - cur.text.length - head.length;
+      if(t.length <= room){ cur.text += head + t; if(p.pg) cur.pgs.push(p.pg); t = ""; }
+      else if(cur.text.length > CHUNK*0.4){ flush(); }
+      else { const cut = cutAt(t, Math.max(room, 800)); cur.text += head + t.slice(0, cut); if(p.pg) cur.pgs.push(p.pg); t = t.slice(cut).trim(); cont = true; flush(); }
+    }
+  });
+  flush();
+  list.forEach((c,i)=>{ c.label = c.pgs.length ? pagesLabel(c.pgs, word.toLowerCase()) : "part "+(i+1)+" of "+list.length; });
+  return list;
+}
+function pageText(items){
+  let out = "", prev = null;
+  for(const it of items){
+    if(typeof it.str !== "string") continue;
+    if(!it.str){ if(it.hasEOL && !/\n$/.test(out)) out += "\n"; if(it.hasEOL) prev = it; continue; }
+    if(prev && !prev.hasEOL && it.transform && prev.transform){
+      const size = Math.abs(prev.transform[3]) || 10;
+      if(Math.abs(it.transform[5] - prev.transform[5]) > Math.max(2, size*0.5)) out += "\n";
+      else { const gap = it.transform[4] - (prev.transform[4] + (prev.width || 0)); if(gap > size*0.15 && !/\s$/.test(out) && !/^\s/.test(it.str)) out += " "; }
+    }
+    out += it.str; if(it.hasEOL) out += "\n";
+    prev = it;
+  }
+  return out.replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
+}
+async function renderPdfPages(doc, pgs){
+  const out = [];
+  for(const pg of pgs){
+    const page = await doc.getPage(pg);
+    const vp1 = page.getViewport({scale:1});
+    const vp = page.getViewport({scale: Math.min(2.5, 1100 / vp1.width)});
+    const c = document.createElement("canvas"); c.width = Math.ceil(vp.width); c.height = Math.ceil(vp.height);
+    const ctx = c.getContext("2d"); ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, c.width, c.height);
+    await page.render({canvasContext:ctx, viewport:vp}).promise;
+    const b = await new Promise(r=>c.toBlob(r, "image/jpeg", 0.85));
+    c.width = c.height = 0; page.cleanup();
+    if(!b) throw new Error("Page "+pg+" could not be turned into a picture.");
+    out.push(b);
+  }
+  return out;
+}
+async function toSendable(file){
+  const types = (IMGLIM && IMGLIM.mediaTypes) || [];
+  if(types.includes(file.type) && file.size <= ((IMGLIM && IMGLIM.maxInputBytes) || 20e6)) return file;
+  let bmp; try{ bmp = await createImageBitmap(file); }catch(e){ throw new Error("“"+file.name+"” could not be opened as a picture."); }
+  const sc = Math.min(1, 2000 / Math.max(bmp.width, bmp.height));
+  const c = document.createElement("canvas"); c.width = Math.round(bmp.width*sc); c.height = Math.round(bmp.height*sc);
+  const ctx = c.getContext("2d"); ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, c.width, c.height); ctx.drawImage(bmp, 0, 0, c.width, c.height);
+  const b = await new Promise(r=>c.toBlob(r, "image/jpeg", 0.88)); c.width = c.height = 0;
+  if(!b) throw new Error("“"+file.name+"” could not be converted.");
+  return b;
+}
+const imgPer = () => Math.max(1, Math.min(2, (IMGLIM && IMGLIM.maxCount) || 1));
+function pdfImgPart(doc, pgs){ return {kind:"img", pgs, label:pagesLabel(pgs), desc:"pictures of PDF pages "+pgs.join(", ")+", in that order", getImages:()=>renderPdfPages(doc, pgs)}; }
+function photoPart(files, idx){ return {kind:"img", files, pgs:idx, label:pagesLabel(idx, "photo"), desc:"photos of the material taken by the student; use the photo number ("+idx.join(", ")+", in that order) as the page number", getImages:()=>Promise.all(files.map(toSendable))}; }
+
+async function pdfParts(file, job){
+  const lib = await getPdfjs();
+  let doc;
+  try{ doc = await lib.getDocument({data:new Uint8Array(await file.arrayBuffer()), isEvalSupported:false}).promise; }
+  catch(e){ throw new Error(e && e.name === "PasswordException" ? "This PDF is password-protected. Save an unlocked copy and upload that." : "This PDF could not be opened."); }
+  job.doc = doc;
+  const want = parseRange(job.pages, doc.numPages);
+  if(!want.length) throw new Error("No pages match “"+job.pages+"”. This PDF has "+doc.numPages+" pages.");
+  if(want.length > MAX_PAGES) throw new Error("This PDF has "+want.length+" pages. Read at most "+MAX_PAGES+" at a time by filling in the Pages box, for example 1-"+MAX_PAGES+".");
+  const pages = [];
+  for(const pg of want){
+    job.phase = "Opening page "+pg+" of "+doc.numPages+"…"; if(pg % 10 === 1) renderJob();
+    const page = await doc.getPage(pg);
+    const text = pageText((await page.getTextContent()).items);
+    page.cleanup();
+    pages.push({pg, text, chars:text.replace(/\s/g,"").length});
+  }
+  job.phase = "";
+  const pics = !!IMGLIM && (job.pics || false);
+  const asPic = p => !!IMGLIM && (pics || p.chars < 120);
+  const textPages = pages.filter(p=>!asPic(p) && p.chars > 0), picPages = pages.filter(asPic);
+  if(!textPages.length && !picPages.length) throw new Error(IMGLIM ? "No readable pages were found in this PDF." : "This PDF looks scanned, and pictures can’t be sent to Claude in this view.");
+  const list = textParts(textPages, "Page");
+  for(let i = 0; i < picPages.length; i += imgPer()) list.push(pdfImgPart(doc, picPages.slice(i, i+imgPer()).map(p=>p.pg)));
+  list.sort((a,b)=>(a.pgs[0]||0)-(b.pgs[0]||0));
+  return {list, how: !picPages.length ? "read as text" : !textPages.length ? "read as pictures" : "read as text and pictures", pages:pagesLabel(want), pw:"p."};
+}
+const W_NS = "http://schemas.openxmlformats.org/wordprocessingml/2006/main", MATH_NS = "http://schemas.openxmlformats.org/officeDocument/2006/math", A_NS = "http://schemas.openxmlformats.org/drawingml/2006/main";
+function walkDocx(node, out){
+  for(let c = node.firstChild; c; c = c.nextSibling){
+    if(c.nodeType !== 1) continue;
+    const ln = c.localName, ns = c.namespaceURI;
+    if(ln === "Fallback") continue;
+    if((ns === W_NS || ns === MATH_NS) && ln === "t"){ out.push(c.textContent); continue; }
+    if(ns === W_NS && ln === "tab"){ out.push("\t"); continue; }
+    if(ns === W_NS && (ln === "br" || ln === "cr")){ out.push("\n"); continue; }
+    if(ns === W_NS && (ln === "instrText" || ln === "delText")) continue;
+    walkDocx(c, out);
+    if(ns === W_NS && ln === "p") out.push("\n");
+    if(ns === MATH_NS && ln === "oMath") out.push(" ");
+  }
+}
+async function docxParts(file){
+  const zip = await zipOpen(file), f = zip.file("word/document.xml");
+  if(!f) throw new Error("This Word file has no readable text.");
+  const xml = new DOMParser().parseFromString(await f.async("string"), "application/xml");
+  const out = []; walkDocx(xml.documentElement, out);
+  const text = out.join("").replace(/\n{3,}/g, "\n\n").trim();
+  if(!text) throw new Error("No text was found in this Word file. If it holds pictures of pages, upload them as photos or a PDF.");
+  return {list:textParts([{pg:null, text}], "Page"), how:"read as text", pages:"", pw:""};
+}
+async function pptxParts(file){
+  const zip = await zipOpen(file);
+  const names = Object.keys(zip.files).filter(n=>/^ppt\/slides\/slide\d+\.xml$/.test(n)).sort((a,b)=>+a.match(/(\d+)\.xml$/)[1] - +b.match(/(\d+)\.xml$/)[1]);
+  const pages = [];
+  for(const n of names){
+    const xml = new DOMParser().parseFromString(await zip.file(n).async("string"), "application/xml");
+    const paras = [...xml.getElementsByTagNameNS(A_NS, "p")].map(p=>[...p.getElementsByTagNameNS(A_NS, "t")].map(t=>t.textContent).join("")).filter(s=>s.trim());
+    pages.push({pg:+n.match(/(\d+)\.xml$/)[1], text:paras.join("\n")});
+  }
+  const withText = pages.filter(p=>p.text.trim());
+  if(!withText.length) throw new Error("No text was found in these slides. If they are pictures, export them as a PDF and upload that.");
+  return {list:textParts(withText, "Slide"), how:"read as text", pages:pagesLabel(pages.map(p=>p.pg), "slide"), pw:"slide"};
+}
+async function prepareParts(g, job){
+  if(g.photos){
+    if(!IMGLIM) throw new Error("Photos can’t be sent to Claude in this view.");
+    const list = [];
+    for(let i = 0; i < g.files.length; i += imgPer()){ const fs = g.files.slice(i, i+imgPer()); list.push(photoPart(fs, fs.map((_,k)=>i+k+1))); }
+    return {list, how:"read as pictures", pages:pagesLabel(g.files.map((_,i)=>i+1), "photo"), pw:"photo"};
+  }
+  const f = g.files[0], ext = extOf(f);
+  if(isPdf(f)) return pdfParts(f, job);
+  if(ext === "docx") return docxParts(f);
+  if(ext === "pptx") return pptxParts(f);
+  if(ext === "doc" || ext === "ppt") throw new Error("Old .doc and .ppt files can’t be read. Save it as PDF, .docx or .pptx and upload that.");
+  if(["txt","md","csv","tex"].includes(ext) || /^text\//.test(f.type)){
+    const text = (await f.text()).trim(); if(!text) throw new Error("This file is empty.");
+    return {list:textParts([{pg:null, text}], "Page"), how:"read as text", pages:"", pw:""};
+  }
+  throw new Error("This kind of file can’t be read. Use PDF, Word (.docx), PowerPoint (.pptx), a text file, or photos.");
+}
+function splitPart(p){
+  if(p.kind === "text"){
+    if(p.text.length < 2500) return null;
+    const cut = cutAt(p.text, Math.floor(p.text.length/2)), a = p.text.slice(0, cut), b = p.text.slice(cut);
+    const marks = a.match(/\[(Page|Slide) (\d+)[^\]]*\]/g), lastMark = marks ? marks[marks.length-1].replace(/, continued\]$/, "]").replace(/\]$/, ", continued]") : "";
+    return [{kind:"text", text:a, pgs:p.pgs, label:p.label+" (first half)"}, {kind:"text", text:(lastMark ? "\n"+lastMark+"\n" : "")+b, pgs:p.pgs, label:p.label+" (second half)"}];
+  }
+  if(p.files && p.files.length > 1) return p.files.map((f,i)=>photoPart([f], [p.pgs[i]]));
+  if(!p.files && p.pgs && p.pgs.length > 1 && JOB && JOB.doc){ const doc = JOB.doc; return p.pgs.map(pg=>pdfImgPart(doc, [pg])); }
+  return null;
+}
+function matPrompt(mat, part, body){
+  const unit = unitOf(mat.u);
+  const others = live().filter(q=>q.u===mat.u && !q.m).slice(-40).map(q=>"- "+q.q.slice(0,110)).join("\n");
+  return [
+    "You are turning a coaching institute’s training material into multiple-choice practice questions for a student preparing for the Tamil Nadu TRB Post Graduate Assistant (Physics) exam.",
+    "",
+    "Topic: "+unit.name,
+    "Sub-topics, with the code to put in \"s\":",
+    JOB.codes.map(k=>k.c+" = "+k.name).join("\n"),
+    mat.subs ? "The student has finished only these sub-topics of the topic. Ignore anything in the material that belongs to other sub-topics." : "The student has finished the whole topic. Ignore anything that does not belong to this topic.",
+    "",
+    part.kind === "text"
+      ? "The material text below is "+part.label+" of “"+mat.name+"”, extracted from the file. Markers like [Page 12] show where each page starts. Symbols and equations may be garbled by the extraction: repair them where the intended formula is clear, and skip anything you cannot reconstruct with confidence."
+      : "The attached images show "+part.label+" of “"+mat.name+"” ("+part.desc+").",
+    "",
+    "Do two things.",
+    "1. Copy every multiple-choice question in this part that fits the sub-topics above. Keep its wording, fixing only obvious typing or scanning errors, and keep the four options in their printed order. Skip a question that does not have exactly four options or that needs a figure or table you cannot see. Set \"kind\" to \"mcq\". If the material gives the answer (beside the question or in an answer key), set \"mk\" to its index 0-3. Always set \"a\" to the option that is actually correct; if that differs from the material’s answer, explain it in \"w\".",
+    "2. Write up to "+NOTES_PER+" new recall-level questions from the explanatory content of this part (definitions, laws, formulas, units, constants, standard results), using only facts the material states. Set \"kind\" to \"notes\". Wrong options must be plausible but clearly wrong to an expert. Skip this step if the part is only questions.",
+    "",
+    "Write everything in English; if the material is in Tamil, translate it faithfully. Use Unicode for symbols and formulas (ħ, ∇, ², ₀, →).",
+    others ? "For step 2, do not repeat these questions the student already has:\n"+others : "",
+    "",
+    "Reply with one JSON object per line and nothing else: no code fence, no list brackets, no commentary. Each line looks like:",
+    "{\"q\": \"question\", \"o\": [\"option\", \"option\", \"option\", \"option\"], \"a\": 0, \"w\": \"one or two sentences on why the answer is correct\", \"r\": \"one short rule worth remembering\", \"s\": \"s1\", \"kind\": \"mcq\", \"pg\": 12, \"mk\": 0}",
+    "Leave out \"pg\" when no page number is known and \"mk\" when the material gives no answer. If nothing in this part fits, reply with exactly {\"none\": true}",
+    body ? "\n=== MATERIAL TEXT ===\n"+body+"\n=== END OF MATERIAL TEXT ===" : ""
+  ].filter(x=>x !== null).join("\n");
+}
+function absorb(text, mat){
+  const seen = new Set(BANK.map(q=>normQ(q.q)).concat(mat.qs.map(q=>normQ(q.q))));
+  let n = 0;
+  String(text||"").split(/\r?\n/).forEach(line=>{
+    const t = line.trim().replace(/^[\[,\s]+/, "").replace(/[\],\s]+$/, "");
+    if(!t || t[0] !== "{") return;
+    let x; try{ x = JSON.parse(t); }catch(e){ return; }
+    const c = cleanOpts(x); if(!c) return;
+    const k = normQ(c.q); if(seen.has(k)) return; seen.add(k);
+    const hit = JOB.codes.find(z=>z.c === String(x.s||"").trim()) || JOB.codes[0];
+    const q = Object.assign({id:mat.id+"-"+rid(), u:mat.u, s:hit.id}, c, {m:mat.id, kind:x.kind === "mcq" ? "mcq" : "notes"});
+    const pg = Number(x.pg); if(Number.isInteger(pg) && pg > 0 && pg < 10000) q.pg = pg;
+    if(x.mk !== undefined && x.mk !== null){ const mk = Number(x.mk); if(Number.isInteger(mk) && mk >= 0 && mk < 4 && mk !== c.a) q.mk = mk; }
+    mat.qs.push(q); n++;
+  });
+  return n;
+}
+const FATAL = {
+  not_granted:"Claude access wasn’t allowed, so the material couldn’t be read. Allow it when asked, then upload again.",
+  sampling_disabled:"Claude isn’t available for this account.",
+  not_declared:"Claude isn’t available on this page.", capability_disabled:"Claude isn’t available in this view.", capability_removed:"Claude isn’t available in this view.",
+  rate_limited:"Claude’s usage limit was reached. The questions read so far are saved; upload the remaining pages later.",
+  session_expired:"Your session expired. Sign in again, then upload the remaining pages.",
+  images_unavailable:"Pictures can’t be sent to Claude in this view."
+};
+async function processPart(part, mat){
+  part.st = "running"; renderJob();
+  const ctl = new AbortController(); JOB.ctls.add(ctl);
+  try{
+    const opts = {signal:ctl.signal, modelTier:"default", cache:false};
+    if(part.kind === "img") opts.images = await part.getImages();
+    if(ctl.signal.aborted) throw {code:"cancelled"};
+    const res = await SAMPLE(matPrompt(mat, part, part.kind === "text" ? part.text : ""), opts);
+    absorb(res.text, mat);
+    const halves = res.truncated ? splitPart(part) : null;
+    if(halves){ part.st = "split"; JOB.parts.push(...halves); }
+    else part.st = "done";
+  }catch(e){
+    if(e && e.text) absorb(e.text, mat);
+    part.st = "failed";
+    const code = e && e.code;
+    if(FATAL[code]){ JOB.fatal = FATAL[code]; stopAll(); }
+    else if(code !== "cancelled"){ part.err = code || (e && e.message) || "Could not read"; }
+  }finally{ JOB.ctls.delete(ctl); }
+  rebuildBank(); saveMat(mat); renderJob();
+}
+function stopAll(){ JOB.cancelled = true; JOB.ctls.forEach(c=>c.abort()); }
+async function runGroup(g){
+  const job = JOB;
+  const mat = {id:"m"+rid(), name:g.name, u:job.u, subs:job.subs, at:Date.now(), pages:"", status:"working", note:"", how:"", pw:"", qs:[]};
+  job.mat = mat; job.parts = []; job.phase = "Opening the file…";
+  M.push(mat); rebuildBank(); renderJob();
+  let prep;
+  try{ prep = await prepareParts(g, job); }
+  catch(e){
+    M = M.filter(x=>x!==mat); rebuildBank();
+    job.results.push({name:g.name, error:(e && e.message) || "This file could not be opened."});
+    job.mat = null; if(job.doc){ try{ job.doc.destroy(); }catch(_){} job.doc = null; }
+    return;
+  }
+  Object.assign(mat, {how:prep.how, pages:prep.pages, pw:prep.pw});
+  job.parts = prep.list; job.phase = "";
+  saveMat(mat); renderJob();
+  let nextI = 0;
+  const worker = async ()=>{ while(!job.cancelled && nextI < job.parts.length){ const p = job.parts[nextI++]; await processPart(p, mat); } };
+  await Promise.all(Array.from({length:CONC}, worker));
+  const left = job.parts.filter(p=>p.st !== "done" && p.st !== "split");
+  mat.status = left.length ? (mat.qs.length ? "partial" : "failed") : "done";
+  const word = mat.pw === "slide" ? "slide" : mat.pw === "photo" ? "photo" : "page";
+  mat.note = !left.length ? "" : "Not read: "+(left.every(p=>p.pgs && p.pgs.length) ? pagesLabel([].concat(...left.map(p=>p.pgs)), word) : left.map(p=>p.label).join(", "))+".";
+  job.results.push({mat});
+  job.mat = null;
+  if(job.doc){ try{ job.doc.destroy(); }catch(_){} job.doc = null; }
+  if(!mat.qs.length && mat.status === "failed"){ M = M.filter(x=>x!==mat); dropMatDocs(mat.id); }
+  else saveMat(mat);
+  rebuildBank();
+}
+async function startExtraction(){
+  if(JOB && JOB.running) return;
+  if(GUEST){ toast("Only the tracker’s owner can add materials"); return; }
+  if(!SAMPLE){ toast("Claude isn’t available in this view"); return; }
+  const u = upUnit(), unit = unitOf(u);
+  if(!unit){ toast("Choose a topic first"); return; }
+  if(!UP.files.length){ toast("Choose a file first"); return; }
+  if(UP.files.some(isPdf)){ try{ parseRange(UP.pages, 9999); }catch(e){ toast(e.message); return; } }
+  if(ensureGeneralSub(u)){ rebuildBank(); save(); }
+  let subs = UP.subs ? [...UP.subs].filter(id=>activeSubs(unit).some(s=>s.id===id)) : null;
+  if(subs && !subs.length){ toast("Pick at least one sub-topic"); return; }
+  if(subs && subs.length === activeSubs(unit).length) subs = null;
+  if(UP.done && !S.completed.includes(u)){ S.completed.push(u); S.completed.sort((a,b)=>a-b); P.sel = null; save(); }
+  const files = UP.files.slice(), imgs = files.filter(isImageFile), others = files.filter(f=>!isImageFile(f));
+  const groups = others.map(f=>({name:f.name, files:[f]}));
+  if(imgs.length) groups.push({name: imgs.length === 1 ? imgs[0].name : "Photos: "+imgs[0].name+" and "+(imgs.length-1)+" more", files:imgs, photos:true});
+  const codeSubs = activeSubs(unit).filter(s=>!subs || subs.includes(s.id));
+  JOB = {running:true, u, subs, pages:UP.pages, pics:UP.pics, groups, gi:0, results:[], mat:null, parts:[], ctls:new Set(), cancelled:false, fatal:null, phase:"", doc:null,
+    codes:codeSubs.map((s,i)=>({c:"s"+(i+1), id:s.id, name:s.name}))};
+  UP.files = []; UP.pages = ""; UP.pics = false;
+  renderMaterials();
+  for(let i = 0; i < groups.length; i++){
+    JOB.gi = i;
+    await runGroup(groups[i]);
+    if(JOB.cancelled) break;
+  }
+  JOB.running = false;
+  const added = JOB.results.reduce((s,r)=>s + (r.mat ? r.mat.qs.length : 0), 0);
+  if(added) toast(plural(added, "question")+" added from your material");
+  renderAll();
+}
+function renderJob(){ if(TAB === "materials") keepFocus(renderMaterials); }
+function matCounts(m){ const c = m.qs.filter(q=>q.kind==="mcq").length; return {all:m.qs.length, copied:c, notes:m.qs.length - c}; }
+function jobHtml(){
+  if(!JOB) return "";
+  if(JOB.running){
+    const parts = JOB.parts.filter(p=>p.st !== "split"), done = parts.filter(p=>p.st==="done" || p.st==="failed").length, total = parts.length;
+    const mat = JOB.mat, c = mat ? matCounts(mat) : {all:0, copied:0, notes:0};
+    const fileLine = JOB.groups.length > 1 ? "File "+(JOB.gi+1)+" of "+JOB.groups.length+". " : "";
+    const status = JOB.cancelled ? "Stopping after the parts already being read…" : (JOB.phase || (total ? "Read "+done+" of "+plural(total, "part")+(mat && mat.how ? ", "+mat.how : "")+"." : "Opening the file…"));
+    return '<div class="sheet job" aria-live="polite"><div class="row1"><div class="spin" aria-hidden="true"></div><div><h3>Reading '+esc(mat ? mat.name : "your material")+'</h3><p class="sub">'+esc(fileLine+status)+'</p></div></div>'+
+      '<div class="jobbar"><i style="width:'+(total ? Math.round(100*done/total) : 3)+'%"></i></div>'+
+      '<p class="hint">'+(c.all ? plural(c.all, "question")+" so far: "+c.copied+" copied from the material, "+c.notes+" written from its notes." : "Questions appear here as each part is read.")+' Keep this page open until it finishes.</p>'+
+      '<div class="start-row"><button class="btn" data-act="stopjob"'+(JOB.cancelled ? " disabled" : "")+'>Stop</button></div></div>';
+  }
+  const rows = JOB.results.map(r=>{
+    if(r.error) return '<div class="jres bad"><b>'+esc(r.name)+'</b><span class="sub">'+esc(r.error)+'</span></div>';
+    const m = r.mat, c = matCounts(m);
+    return '<div class="jres'+(c.all ? "" : " bad")+'"><b>'+esc(m.name)+'</b><span class="sub">'+(c.all ? plural(c.all, "question")+" added: "+c.copied+" copied from the material, "+c.notes+" written from its notes." : m.status === "done" ? "No questions were found for the chosen sub-topics." : "Nothing was read from this file.")+'</span>'+
+      (m.note ? '<span class="hint">'+esc(m.note)+(m.pw==="p." ? " Upload those pages again with the Pages box to add them." : "")+'</span>' : '')+'</div>';
+  }).join("");
+  const added = JOB.results.reduce((s,r)=>s + (r.mat ? r.mat.qs.length : 0), 0);
+  const canPrac = added && S.completed.includes(JOB.u);
+  return '<div class="sheet job"><div class="card-title"><h3>'+(added ? "Questions added" : "Nothing added")+'</h3></div>'+
+    (JOB.fatal ? '<div class="notice">'+esc(JOB.fatal)+'</div>' : '')+rows+
+    '<div class="start-row">'+(canPrac ? '<button class="btn primary" data-act="practjob">Practise these</button>' : '')+'<button class="btn" data-act="jobdone">Upload another</button></div></div>';
+}
+function upFormHtml(){
+  const u = upUnit(), unit = unitOf(u);
+  if(!unit) return '<div class="sheet"><div class="empty">Add a topic on the Syllabus tab first.</div></div>';
+  const subs = activeSubs(unit), sel = UP.subs;
+  const opts = activeUnits().map(x=>'<option value="'+x.n+'"'+(x.n===u ? " selected" : "")+'>'+esc(roman(x.n)+". "+x.name)+'</option>').join("");
+  const subChips = subs.length ? subs.map(s=>'<label class="sel sm"><input type="checkbox" data-us="'+esc(s.id)+'"'+(!sel || sel.has(s.id) ? " checked" : "")+'><span>'+esc(s.name)+'</span></label>').join("")+
+    '<div class="mini"><button class="linkish" data-act="usall">Select all</button><button class="linkish" data-act="usnone">Clear</button></div>'
+    : '<span class="hint">This topic has no sub-topics yet, so its questions will go under “General”. You can add sub-topics on the Syllabus tab.</span>';
+  const hasPdf = UP.files.some(isPdf), hasImg = UP.files.some(isImageFile);
+  const files = UP.files.map((f,i)=>'<div class="file"><span class="nm">'+esc(f.name)+'</span><span class="sz">'+fmtSize(f.size)+'</span><button class="x" data-act="rmfile" data-i="'+i+'" aria-label="Remove '+esc(f.name)+'">×</button></div>').join("");
+  const nSel = sel ? sel.size : subs.length;
+  const can = READY && SAMPLE && UP.files.length && (subs.length === 0 || nSel > 0) && !(hasImg && !IMGLIM && UP.files.every(isImageFile));
+  return '<div class="sheet upform">'+
+    '<div class="setup-row"><label class="lbl" for="up-u">Topic</label><select class="txt" id="up-u">'+opts+'</select></div>'+
+    '<div class="setup-row"><div class="lbl">Sub-topics this material covers</div><div class="optrow">'+subChips+'</div></div>'+
+    '<div class="setup-row"><div class="lbl">Files</div>'+(files ? '<div class="files">'+files+'</div>' : '')+
+      '<div class="pickrow"><label class="btn" for="up-file">'+(UP.files.length ? "Add more files" : "Choose files")+'</label><input type="file" id="up-file" class="vh" multiple accept=".pdf,.docx,.pptx,.txt,.md,image/*,application/pdf"><span class="hint">PDF, Word (.docx), PowerPoint (.pptx), text, or photos of pages.</span></div>'+
+      (hasImg && !IMGLIM && READY ? '<div class="notice">Photos can’t be sent to Claude in this view, so they will be skipped.</div>' : '')+'</div>'+
+    (hasPdf ? '<div class="setup-row"><label class="lbl" for="up-pages">Pages</label><input class="txt" id="up-pages" inputmode="text" autocomplete="off" placeholder="All pages, or for example 1-12, 15" value="'+esc(UP.pages)+'"><span class="hint">Use this when the PDF covers more than you have finished.</span></div>' : '')+
+    (hasPdf && IMGLIM ? '<label class="check"><input type="checkbox" id="up-pics"'+(UP.pics ? " checked" : "")+'><span>Read every page as a picture<small>Better for scanned or handwritten notes and pages full of equations. Slower. Scanned pages are read this way anyway.</small></span></label>' : '')+
+    (!S.completed.includes(u) ? '<label class="check"><input type="checkbox" id="up-done"'+(UP.done ? " checked" : "")+'><span>Mark '+esc(unit.name)+' as completed</span></label>' : '')+
+    '<div class="start-row"><button class="btn primary" data-act="extract"'+(can ? "" : " disabled")+'>Extract questions</button>'+
+    '<span class="hint">Claude copies the multiple-choice questions it finds and writes a few more from the notes. A long PDF can take several minutes.</span></div>'+
+  '</div>';
+}
+function matQsHtml(m){
+  const all = MATALL.has(m.id), list = all ? m.qs : m.qs.slice(0, 40);
+  return '<div class="mqs">'+list.map(q=>{
+    const fl = S.flags.includes(q.id);
+    return '<div class="mq'+(fl ? " flagged" : "")+'"><div>'+esc(q.q)+'</div><div class="ans">'+esc(q.o[q.a])+'</div>'+mkNote(q)+
+      '<div class="meta"><span>'+esc(subName(q.s) || "")+'</span>'+(q.pg && m.pw ? '<span>'+esc(m.pw+" "+q.pg)+'</span>' : '')+'<span>'+(q.kind==="mcq" ? "Copied" : "Written from the notes")+'</span>'+
+      (fl ? '<span>Flagged</span>' : '<button class="linkish flagb" data-act="flag" data-id="'+esc(q.id)+'">Flag as wrong</button>')+'</div></div>';
+  }).join("")+(!all && m.qs.length > 40 ? '<div class="mmore"><button class="btn small" data-act="mqall" data-id="'+esc(m.id)+'">Show all '+m.qs.length+'</button></div>' : '')+'</div>';
+}
+function libHtml(){
+  const ms = M.filter(m=>!(JOB && JOB.running && JOB.mat === m));
+  if(!ms.length) return '<div class="empty">No materials yet. When you finish a topic, upload the institute’s notes or question sheets for it here.</div>';
+  const st = stats();
+  const order = S.syl.units.map(u=>u.n);
+  const byU = {}; ms.forEach(m=>{ (byU[m.u] || (byU[m.u] = [])).push(m); });
+  return Object.keys(byU).map(Number).sort((a,b)=>order.indexOf(a)-order.indexOf(b)).map(n=>{
+    const u = unitOf(n), off = !u || u.off;
+    const cards = byU[n].slice().sort((a,b)=>b.at-a.at).map(m=>{
+      const c = matCounts(m), asked = m.qs.filter(q=>st.per[q.id]).length;
+      const subsLabel = !m.subs ? "All sub-topics" : m.subs.length <= 2 ? m.subs.map(subName).filter(Boolean).join(", ") : plural(m.subs.length, "sub-topic");
+      const meta = ['Added '+fmtDate(m.at), m.pages, m.how, subsLabel].filter(Boolean).map(x=>'<span>'+esc(x)+'</span>').join("");
+      const pill = m.status === "partial" ? '<span class="pill warn">Partly read</span>' : m.status === "failed" ? '<span class="pill bad">Not read</span>' : '';
+      const open = MATOPEN.has(m.id);
+      const canPrac = c.all && !off && S.completed.includes(n);
+      return '<div class="mat"><div class="mh"><div class="mn">'+esc(m.name)+'</div><div class="mm">'+meta+'</div>'+
+        '<div class="ma"><span class="pill neutral">'+plural(c.all, "question")+'</span>'+(c.all ? '<span class="hint">'+c.copied+' copied, '+c.notes+' from the notes, '+asked+' asked so far</span>' : '')+pill+'</div>'+
+        (m.note ? '<p class="hint">'+esc(m.note)+'</p>' : '')+
+        '<div class="ma">'+(canPrac ? '<button class="linkish" data-act="practmat" data-id="'+esc(m.id)+'">Practise these</button>' : (c.all && !off ? '<span class="hint">Mark the topic as completed to practise these.</span>' : ''))+
+        (GUEST ? '' : '<button class="linkish danger" data-act="delmat" data-id="'+esc(m.id)+'">'+(armed("del"+m.id) ? "Tap again to delete it and its questions" : "Delete")+'</button>')+'</div>'+
+        (c.all ? '<details data-mq="'+esc(m.id)+'"'+(open ? " open" : "")+'><summary>'+(open ? "Hide the questions" : "See the questions")+'</summary>'+(open ? matQsHtml(m) : '')+'</details>' : '')+
+      '</div></div>';
+    }).join("");
+    return '<div class="mgroup"><h4><i class="udot" style="background:'+ucolor(n)+'"></i>'+esc(uname(n))+(off ? ' <span class="muted" style="font-weight:400">(removed topic)</span>' : '')+'</h4><div class="mats">'+cards+'</div></div>';
+  }).join("");
+}
+function renderMaterials(){
+  const total = M.reduce((s,m)=>s + m.qs.length, 0);
+  const head = '<div class="sec-head"><div><h2>Materials</h2><p class="sub">Upload the institute’s notes or question sheets for a topic you have finished. Claude turns them into practice questions, and they come first when you practise.</p></div>'+
+    (total ? '<div class="prog"><div class="prog-num">'+total+'<small>questions from '+plural(M.length, "material")+'</small></div></div>' : '')+'</div>';
+  let top;
+  if(JOB) top = jobHtml();
+  else if(!READY) top = '<div class="sheet"><div class="loading"><div class="spin" aria-hidden="true"></div><p class="sub">Checking whether Claude can read files here…</p></div></div>';
+  else if(window.HOST && !window.HOST.ok) top = '<div class="notice" style="margin-bottom:16px">This copy isn’t connected to its online record'+(window.HOST.msg === "offline" ? ", probably because the connection dropped. Reload when you’re back online." : " yet, so everything stays in this browser.")+'</div>';
+  else if(GUEST) top = '<div class="notice" style="margin-bottom:16px">Only the tracker’s owner can add or delete materials. All of their questions are here to practise.</div>';
+  else if(!SAMPLE && window.HOST) top = '<div class="sheet upform"><div class="card-title"><h3>Add questions from Claude</h3></div><p class="sub">Claude can’t run on this site. Ask Claude in the chat for questions from a material, then choose the file it gives you. Questions already here are skipped.</p><div class="pickrow"><label class="btn" for="q-file">Choose questions file</label><input type="file" id="q-file" class="vh" accept=".json,application/json"></div></div>';
+  else if(!SAMPLE) top = '<div class="notice" style="margin-bottom:16px">Reading materials needs Claude, which isn’t available in this view. Open this tracker in the Claude app or on claude.ai to upload. Questions already extracted still work everywhere.</div>';
+  else top = upFormHtml();
+  $("#p-materials").innerHTML = head + blockedNote() + top +
+    '<div class="sheet" style="margin-top:16px"><div class="card-title"><h3>Your materials</h3><span class="note">Newest first in each topic</span></div>'+libHtml()+'</div>';
+  /* bound on the element so a pick still lands if the page re-renders while the picker is open */
+  const fi = $("#up-file"); if(fi) fi.addEventListener("change", ()=>onFilePick(fi));
+  const qf = $("#q-file"); if(qf) qf.addEventListener("change", ()=>{ const f = qf.files && qf.files[0]; if(!f) return; f.text().then(importQFile, ()=>toast("That file could not be read.")); });
+}
+/* A questions file from Claude: {kind:"trb-questions", material:{id,name,u,...}, questions:[...]}.
+   New questions are added to that material; ones already here (same id) are skipped. */
+function importQFile(txt){
+  if(GUEST){ toast("Only the tracker’s owner can add questions"); return; }
+  let o = null; try{ o = JSON.parse(txt); }catch(e){}
+  if(!o || o.kind !== "trb-questions" || !o.material || !Array.isArray(o.questions)){ toast("That isn’t a questions file from Claude."); return; }
+  const inc = normMat(Object.assign({}, o.material, {qs:o.questions}));
+  if(!inc){ toast("That questions file is damaged. Ask Claude for it again."); return; }
+  if(!unitOf(inc.u)){ toast("That file is for a topic this tracker doesn’t have."); return; }
+  let m = MBY[inc.id], added = 0;
+  if(!m){ M.push(inc); M.sort((a,b)=>a.at-b.at); m = inc; added = inc.qs.length; }
+  else {
+    const have = new Set(m.qs.map(q=>q.id)), fresh = inc.qs.filter(q=>!have.has(q.id));
+    m.qs = m.qs.concat(fresh); added = fresh.length;
+    ["name","pages","how","pw","note","status"].forEach(k=>{ if(inc[k]) m[k] = inc[k]; });
+    if(inc.subs !== undefined) m.subs = inc.subs;
+  }
+  rebuildBank(); if(added) saveMat(m); renderAll();
+  toast(added ? plural(added, "question")+" added to “"+short(m.name, 40)+"”" : "All of those questions are already here");
+}
+function onFilePick(fi){
+  const add = [...(fi.files || [])].filter(f=>!UP.files.some(x=>x.name===f.name && x.size===f.size));
+  UP.files = UP.files.concat(add).slice(0, 30);
+  renderMaterials();
+}
+function deleteMat(id){
+  if(GUEST) return;
+  const m = MBY[id]; if(!m) return;
+  M = M.filter(x=>x.id !== id);
+  const ids = new Set(m.qs.map(q=>q.id));
+  const gone = S.flags.filter(f=>ids.has(f));
+  MATOPEN.delete(id); ARM = null;
+  rebuildBank(); dropMatDocs(id);
+  if(gone.length) setFlags(gone, false);
+  renderAll();
+  toast("Deleted “"+short(m.name, 40)+"” and its "+plural(m.qs.length, "question"));
+}
+function practiseMat(u, subs){
+  if(!S.completed.includes(u)) return;
+  P.sel = new Map([[u, new Set(subs || activeSubs(unitOf(u)).map(s=>s.id))]]);
+  P.src = "material"; P.order = "priority"; P.view = "setup";
+  showTab("practice");
+}
+
+/* ---------- HISTORY ---------- */
+const H = {pu:1, py:2019};
+function inQuiz(y, n){ const re = new RegExp(y+" Q"+n+"(?!\\d)"); return BANK.some(q=>isPyq(q) && re.test(q.p)); }
+function renderHistory(){
+  const st = stats();
+  const rem = st.missed.map(id=>{
+    const q = BY[id], p = st.per[id];
+    return '<div class="rem"><div style="display:flex;gap:8px;flex-wrap:wrap">'+unitChip(q.u,q.s)+srcChip(q)+'</div>'+
+      '<div class="q">'+esc(q.q)+'</div>'+
+      '<div class="mine">You picked: '+esc(q.o[p.lastPick])+'</div>'+
+      '<div class="right">Correct: '+esc(q.o[q.a])+'</div>'+
+      '<div class="remember"><span class="lbl">Remember</span>'+esc(q.r)+'</div>'+
+      (q.p?'<div>'+pyqTag(q.p)+'</div>':"")+'</div>';
+  }).join("");
+  const sessions = st.sessions.slice().reverse().map(s=>{
+    const chips = Object.keys(s.byUnit).map(k=>'<span class="chip"><i class="udot" style="background:'+ucolor(+k)+'"></i>'+esc(uname(+k))+' '+s.byUnit[k].r+'/'+s.byUnit[k].n+'</span>').join("");
+    const cls = pct(s.right,s.total)>=85?"good":pct(s.right,s.total)>=65?"warn":"bad";
+    const rows = s.at.a.filter(([id])=>BY[id] && isActiveQ(BY[id])).sort((a,b)=>((a[1]===BY[a[0]].a)?1:0)-((b[1]===BY[b[0]].a)?1:0)).map(([id,pk])=>reviewItem(id,pk)).join("");
+    return '<details class="sess"><summary><span class="sn">Session '+s.idx+'</span>'+(s.at.n ? '<span class="sd"><b>'+esc(s.at.n)+'</b></span>' : '')+'<span class="sd">'+esc(fmtDate(s.at.t))+', '+esc(fmtTime(s.at.t))+'</span><span class="pill '+cls+'">'+s.right+'/'+s.total+' · '+pct(s.right,s.total)+'%</span><span style="display:flex;gap:6px;flex-wrap:wrap">'+chips+'</span></summary><div class="body">'+rows+'</div></details>';
+  }).join("");
+  const rows = (PYQ[H.py][H.pu]||[]).map(r=>'<tr><td class="num">Q'+r[0]+'</td><td>'+esc(r[1])+'</td><td>'+(r[2]?esc(r[2]):'<span class="muted">No key supplied</span>')+'</td><td>'+(inQuiz(H.py,r[0])?'<span class="pill good">In your quiz</span>':'<span class="muted">Not yet</span>')+'</td></tr>').join("");
+  const segUnit = [1,3,4].map(n=>'<button aria-pressed="'+(H.pu===n)+'" data-hu="'+n+'"><i class="udot" style="background:'+ucolor(n)+'"></i>'+esc(uname(n))+'</button>').join("");
+  const segYear = [2019,2025].map(y=>'<button aria-pressed="'+(H.py===y)+'" data-hy="'+y+'">'+y+'</button>').join("");
+  const nFlag = S.flags.filter(id=>BY[id]).length, nOwnFlag = GUEST ? S.flags.filter(id=>BY[id] && ownFlag(id)).length : 0;
+  $("#p-history").innerHTML =
+    '<div class="sec-head"><div><h2>History</h2><p class="sub">Every session you have taken, what to remember from your misses, and the previous-year questions for your completed topics.</p></div></div>'+
+    '<div class="sheet"><div class="card-title"><h3>Things to remember</h3><span class="note">'+(st.missed.length?st.missed.length+" to revise. A question leaves this list once you answer it correctly.":"")+'</span></div>'+
+    (st.missed.length ? '<div class="rem-grid">'+rem+'</div>' : '<div class="empty">No open misses. Questions you get wrong will collect here with the rule to remember.</div>')+'</div>'+
+    '<div class="sheet"><div class="card-title"><h3>Sessions</h3><span class="note">Newest first. Open one to see every question and answer.</span></div>'+(sessions||'<div class="empty">No sessions yet. Take a practice set and it will appear here.</div>')+'</div>'+
+    '<div class="sheet"><div class="card-title"><h3>Previous-year paper map</h3><span class="note">'+(H.py===2019?"Answers are from the tentative key":"Official key not supplied. A few answers are filled in where they are standard results.")+'</span></div>'+
+    '<div class="tabbar"><div class="seg" role="group" aria-label="Topic">'+segUnit+'</div><div class="seg" role="group" aria-label="Year">'+segYear+'</div></div>'+
+    '<div class="tscroll"><table><thead><tr><th>No.</th><th>What was asked</th><th>Answer</th><th>Quiz</th></tr></thead><tbody>'+rows+'</tbody></table></div></div>'+
+    (nFlag ? '<div class="sheet"><div class="card-title"><h3>Flagged questions</h3></div><p class="sub">'+nFlag+' question'+(nFlag===1?" is":"s are")+' hidden from practice and from your scores.'+(GUEST ? ' '+(nOwnFlag ? nOwnFlag+' of them '+(nOwnFlag===1?"was":"were")+' flagged by you. ' : '')+'Only the tracker’s owner can restore the others.' : '')+'</p>'+
+      (!GUEST || nOwnFlag ? '<div class="start-row"><button class="btn small" data-act="unflag">'+(GUEST ? "Restore my flags" : "Restore all")+'</button></div>' : '')+'</div>' : "");
+}
+/* ---------- DASHBOARD ---------- */
+const AREAS = [
+  {name:"Mathematical and mechanics base", units:[1,2]},
+  {name:"Fields and quantum theory", units:[3,4]},
+  {name:"Matter, heat and radiation", units:[5,6,7,8]},
+  {name:"Electronics and experiments", units:[9,10]}
+];
+function trendSvg(sessions){
+  const pts = sessions.slice(-14), n = pts.length;
+  const W = 640, H2 = 230, L = 38, R = 20, T = 20, B = 30;
+  const x = i => n===1 ? L+(W-L-R)/2 : L+(W-L-R)*i/(n-1);
+  const y = v => T+(H2-T-B)*(1-v/100);
+  let g = "";
+  [0,25,50,75,100].forEach(v=>{ g += '<line class="gl" x1="'+L+'" x2="'+(W-R)+'" y1="'+y(v)+'" y2="'+y(v)+'"/><text x="'+(L-8)+'" y="'+(y(v)+4)+'" text-anchor="end">'+v+'</text>'; });
+  const path = pts.map((s,i)=>(i?"L":"M")+x(i).toFixed(1)+" "+y(pct(s.right,s.total)).toFixed(1)).join(" ");
+  let dots = "", labels = "";
+  pts.forEach((s,i)=>{
+    const p = pct(s.right,s.total), tp = "Session "+s.idx+" · "+fmtDate(s.at.t)+" · "+s.right+"/"+s.total+" ("+p+"%)";
+    dots += '<circle class="dot" cx="'+x(i).toFixed(1)+'" cy="'+y(p).toFixed(1)+'" r="5"/><circle class="hit" tabindex="0" cx="'+x(i).toFixed(1)+'" cy="'+y(p).toFixed(1)+'" r="16" data-tip="'+esc(tp)+'" aria-label="'+esc(tp)+'"/>';
+    if(n<=8 || i%2===(n-1)%2) labels += '<text x="'+x(i).toFixed(1)+'" y="'+(H2-8)+'" text-anchor="middle">S'+s.idx+'</text>';
+  });
+  const lp = pct(pts[n-1].right, pts[n-1].total);
+  const endLbl = '<text class="vl" x="'+x(n-1).toFixed(1)+'" y="'+(y(lp)-12).toFixed(1)+'" text-anchor="'+(n===1?"middle":"end")+'">'+lp+'%</text>';
+  return '<svg class="svgc" viewBox="0 0 '+W+' '+H2+'" role="img" aria-label="Score per session, percent correct">'+g+'<path class="ln" d="'+path+'"/>'+dots+endLbl+labels+'</svg>';
+}
+function blockedNote(){
+  return cloudBlocked ? '<div class="notice" style="margin-bottom:16px"><b>Results can’t be saved online right now.</b> The test works, but results stay in this browser only. Use Copy session summary after each test to send them to the owner.</div>' : "";
+}
+function areaCard(a, st){
+  const us = a.units.map(n=>unitOf(n)).filter(u=>u && !u.off);
+  const doneN = us.filter(u=>S.completed.includes(u.n)).length;
+  let r = 0, n = 0; us.forEach(u=>{ const x = st.unit[u.n]; if(x){ r += x.r; n += x.n; } });
+  const s = n ? statusOf(n, r) : {cls:"neutral", label:"No answers yet"};
+  const rows = us.map(u=>{
+    const on = S.completed.includes(u.n), x = st.unit[u.n];
+    const val = x ? pct(x.r,x.n)+"% · "+x.r+"/"+x.n : (on ? "no answers yet" : "not started");
+    return '<div class="urow"><div class="l1"><div class="nm"><i class="udot" style="background:'+ucolor(u.n)+'"></i><span>'+roman(u.n)+' · '+esc(u.name)+'</span></div><div class="rt"><span class="pill '+(on?"good":"neutral")+'">'+(on?"Completed":"Not yet")+'</span><span>'+esc(val)+'</span></div></div>'+
+      '<div class="track" data-tip="'+esc(u.name+": "+val)+'"><i style="width:'+(x?Math.max(2,pct(x.r,x.n)):0)+'%;background:'+ucolor(u.n)+'"></i></div></div>';
+  }).join("");
+  return '<article class="area"><div class="area-h"><div><h3>'+esc(a.name)+'</h3><div class="sm">'+doneN+' of '+plural(us.length,"topic")+' completed'+(n?" · "+pct(r,n)+"% correct over "+n+" answers":"")+'</div></div><span class="pill '+s.cls+'">'+s.label+'</span></div>'+rows+'</article>';
+}
+let XARM = 0, XOPEN = false;
+function exportCode(){
+  try{ return btoa(unescape(encodeURIComponent(JSON.stringify({v:3, completed:S.completed, attempts:S.attempts, flags:S.flags, syl:S.syl, gen:GEN, mats:M.map(packMat)})))); }catch(e){ return ""; }
+}
+const okId = id => typeof id === "string" && /^[A-Za-z0-9_.~:@+-]{1,150}$/.test(id);
+function importCode(str){
+  const o = JSON.parse(decodeURIComponent(escape(atob(str.replace(/\s+/g,"")))));
+  if(!validState(o)) throw new Error("bad");
+  const atts = o.attempts.filter(a=>a && okId(a.id) && Array.isArray(a.a) && typeof a.t === "number");
+  const flags = (Array.isArray(o.flags) ? o.flags : []).filter(okId);
+  applyState(Object.assign({}, o, {attempts:atts, flags}));
+  setGen(Array.isArray(o.gen) ? o.gen : []);
+  if(Array.isArray(o.mats)){
+    const next = o.mats.map(normMat).filter(Boolean), keep = new Set(next.map(m=>m.id));
+    M.forEach(m=>{ if(!keep.has(m.id)) dropMatDocs(m.id); });
+    M = next; rebuildBank(); M.forEach(saveMat);
+  }
+  if(stateRef){
+    const keepS = new Set(atts.map(a=>a.id));
+    OUT.s = {};
+    Object.keys(Object.assign({}, CL.s, CL.ls)).forEach(id=>{ if(!keepS.has(id)) OUT.s[id] = null; });
+    atts.forEach(a=>{ if(!CL.s[a.id]) OUT.s[a.id] = sBody(a); });
+    OUT.f = {}; const nf = new Set(flags);
+    Object.keys(CL.f).concat(CL.lf).forEach(q=>{ if(!nf.has(q)) OUT.f[q] = false; });
+    flags.forEach(q=>{ if(!CL.f[q]) OUT.f[q] = true; });
+    OUT.g = {}; Object.keys(CL.g).forEach(id=>{ OUT.g[id] = null; });
+    if(CL.lg && qbankRef && cloudOn()) qbankRef.delete().catch(()=>{});
+    if(GEN.length) OUT.g["b"+rid()] = {at:Date.now(), items:GEN.map(q=>({id:q.id,u:q.u,s:q.s,q:q.q,o:q.o,a:q.a,w:q.w,r:q.r}))};
+    derive(); writeMain(true); pushOut();
+  }
+  dirty(); persistLocal();
+}
+function renderDashboard(){
+  const st = stats();
+  const lv = live();
+  const acc = st.total ? pct(st.right, st.total) : null;
+  const act0 = activeUnits();
+  const bu = compUnits().filter(n=>lv.some(q=>q.u===n));
+  const unitBars = bu.map(n=>{ const u = st.unit[n]; return u ? hbar(uname(n), pct(u.r,u.n), pct(u.r,u.n)+"% · "+u.r+"/"+u.n, ucolor(n), ucolor(n)) : hbar(uname(n), 0, "not attempted", ucolor(n), ucolor(n)); }).join("");
+  const cover = bu.map(n=>{ const tot = lv.filter(q=>q.u===n).length, seen = (st.unit[n]||{seen:0}).seen; return hbar(uname(n), pct(seen,tot), seen+" of "+tot+" asked", ucolor(n), ucolor(n)); }).join("");
+  const nMat = lv.filter(q=>q.m).length, nGen = lv.filter(q=>q.gen).length, nBuilt = lv.length - nMat - nGen;
+  const topics = Object.values(st.topic).sort((a,b)=>{ const pa = pct(a.r,a.n), pb = pct(b.r,b.n); return pa-pb || b.n-a.n; });
+  const topicBars = topics.map(t=>{ const s = statusOf(t.n,t.r); return hbar(subName(t.s) || "Other", pct(t.r,t.n), pct(t.r,t.n)+"% · "+t.r+"/"+t.n, ucolor(t.u), ucolor(t.u), '<span class="pill '+s.cls+'">'+s.label+'</span>'); }).join("");
+  const weak = topics.filter(t=>t.n>=1 && pct(t.r,t.n)<100).slice(0,3);
+  const focus = (weak.length || st.missed.length) ?
+    '<div class="focus">'+weak.map(t=>'<div class="frow"><span class="udot" style="background:'+ucolor(t.u)+'"></span><div class="n">'+esc(subName(t.s) || "Other")+' <span class="muted" style="font-weight:400">· '+esc(uname(t.u))+'</span></div><span class="mono muted">'+pct(t.r,t.n)+'% · '+t.r+'/'+t.n+'</span></div>').join("")+
+    (st.missed.length ? '<div class="frow"><div class="n">'+st.missed.length+' open miss'+(st.missed.length===1?"":"es")+' waiting for a retry</div><button class="btn small" data-go="practice" data-order="missed">Practise misses</button></div>' : "")+'</div>'
+    : '<div class="empty">No weak spots yet. Keep the daily set going.</div>';
+  const todayN = (()=>{ const k = dkey(Date.now()); return S.attempts.filter(a=>dkey(a.t)===k).reduce((s,a)=>s+a.a.length,0); })();
+  const act = (()=>{ const out = []; const d = new Date(); d.setHours(12,0,0,0); for(let i=13;i>=0;i--){ const dd = new Date(d); dd.setDate(d.getDate()-i); const k = dkey(dd.getTime()); out.push({k, d:dd, n:S.attempts.filter(a=>dkey(a.t)===k).reduce((s,a)=>s+a.a.length,0)}); } return out; })();
+  const mx = Math.max(1, ...act.map(a=>a.n));
+  const actHtml = '<div class="act" role="img" aria-label="Questions answered per day, last 14 days">'+act.map(a=>'<div class="col" data-tip="'+esc(fmtDate(a.d.getTime())+": "+a.n+" question"+(a.n===1?"":"s"))+'" tabindex="0"><div class="b'+(a.n?"":" zero")+'" style="height:'+(a.n? Math.round(10+78*a.n/mx) : 0)+'px"></div><div class="d">'+a.d.getDate()+'</div></div>').join("")+'</div>';
+  const where = stateRef && !cloudBlocked ? "Tests, flags, your syllabus and your materials are saved online with this tracker, so every phone that opens it sees the same progress. Each test is saved on its own, so two phones never overwrite each other, and a test taken offline uploads when the phone reconnects. This browser only keeps a copy for a quicker start." : "Results are saved on this device only. To use them on another device, copy the progress code below and import it there.";
+  const areas = AREAS.concat(act0.some(u=>u.custom) ? [{name:"Topics you added", units:act0.filter(u=>u.custom).map(u=>u.n)}] : []).filter(a=>a.units.some(n=>{ const u = unitOf(n); return u && !u.off; }));
+  const empty = blockedNote() + (st.sessions.length===0 ? '<div class="notice" style="margin-bottom:16px">No sessions yet. Tick the topics you have finished on the Syllabus tab, upload their materials, then take a practice set. Your charts fill in as you go. <span style="display:inline-flex;gap:8px;margin-left:6px;flex-wrap:wrap"><button class="btn small" data-go="syllabus">Open syllabus</button><button class="btn small primary" data-go="practice">Start practice</button></span></div>' : "");
+  $("#p-dashboard").innerHTML =
+    '<div class="sec-head"><div><h2>Dashboard</h2><p class="sub">Your revision across the whole syllabus, then the detail for the topics you have completed.</p></div></div>'+empty+
+    '<div class="kpis">'+
+      '<div class="kpi"><div class="v">'+(acc===null?"–":acc+'<small>%</small>')+'</div><div class="k">Overall accuracy'+(st.total?" · "+st.right+" of "+st.total:"")+'</div></div>'+
+      '<div class="kpi"><div class="v">'+compUnits().length+'<small>of '+act0.length+'</small></div><div class="k">Syllabus topics completed</div></div>'+
+      '<div class="kpi"><div class="v">'+st.sessions.length+'</div><div class="k">Sessions taken</div></div>'+
+      '<div class="kpi"><div class="v">'+st.streak+'<small>day'+(st.streak===1?"":"s")+'</small></div><div class="k">Current streak'+(todayN?"":" · nothing yet today")+'</div></div>'+
+    '</div>'+
+    '<div class="card-title" style="margin-top:6px"><h3>Syllabus overview</h3><span class="note">The topics in broader areas</span></div>'+
+    '<div class="areas" style="margin-bottom:16px">'+areas.map(a=>areaCard(a, st)).join("")+'</div>'+
+    '<div class="sheet"><div class="card-title"><h3>Where to focus next</h3><span class="note">Lowest accuracy first</span></div>'+focus+'</div>'+
+    (st.sessions.length ? '<div class="sheet"><div class="card-title"><h3>Score per session</h3><span class="note">Percent correct'+(st.sessions.length<2?" · take a second session to see the trend":"")+'</span></div>'+trendSvg(st.sessions)+'</div>' : "")+
+    (bu.length ? '<div class="grid2" style="margin-top:16px"><div class="sheet"><div class="card-title"><h3>Accuracy by topic</h3></div><div class="hbars">'+unitBars+'</div></div>'+
+    '<div class="sheet"><div class="card-title"><h3>Bank coverage</h3><span class="note">Questions asked at least once</span></div><div class="hbars">'+cover+'</div><p class="hint" style="margin-top:12px">In the bank: '+nMat+' from your materials, '+nBuilt+' built in, '+nGen+' written by Claude.</p></div></div>' : "")+
+    (topics.length ? '<div class="sheet"><div class="card-title"><h3>Accuracy by sub-topic</h3><span class="note">Status needs at least 3 answers on a sub-topic</span></div><div class="hbars">'+topicBars+'</div></div>' : "")+
+    '<div class="sheet"><div class="card-title"><h3>Questions per day</h3><span class="note">Last 14 days</span></div>'+actHtml+'</div>'+
+    '<details class="sheet xfer"'+(XOPEN ? " open" : "")+'><summary class="linkish" style="cursor:pointer">Back up or move your progress</summary>'+
+      '<p class="sub" style="margin-top:8px">'+esc(where)+'</p>'+
+      '<div class="row"><button class="btn small" data-act="copycode">Copy progress code</button></div>'+
+      '<textarea id="code" readonly aria-label="Progress code" placeholder="The code appears here if copying does not work."></textarea>'+
+      (GUEST ? '' :
+      '<p class="sub" style="margin-top:12px">To bring progress in from another browser, account or an older copy of this tracker, paste its code here.</p>'+
+      '<textarea id="imp" placeholder="Paste a progress code" aria-label="Paste a progress code">'+esc(DRAFT.imp||"")+'</textarea>'+
+      '<div class="row"><button class="btn small" data-act="import">Import and replace my progress</button></div>')+
+    '</details>';
+}
+/* ---------- TOOLTIP + TOAST ---------- */
+const tip = $("#tip");
+function showTip(el){
+  tip.textContent = el.getAttribute("data-tip"); tip.hidden = false;
+  const r = el.getBoundingClientRect(), tw = tip.offsetWidth, th = tip.offsetHeight;
+  const left = Math.min(Math.max(8, r.left + r.width/2 - tw/2), window.innerWidth - tw - 8);
+  let top = r.top - th - 8; if(top < 8) top = r.bottom + 8;
+  tip.style.left = left+"px"; tip.style.top = top+"px";
+}
+document.addEventListener("pointerover", e=>{ const t = e.target.closest && e.target.closest("[data-tip]"); if(t) showTip(t); else tip.hidden = true; });
+document.addEventListener("focusin", e=>{ const t = e.target.closest && e.target.closest("[data-tip]"); if(t) showTip(t); });
+document.addEventListener("focusout", ()=>{ tip.hidden = true; });
+document.addEventListener("scroll", ()=>{ tip.hidden = true; }, {passive:true});
+let toastTimer = null;
+function toast(msg){ const t = $("#toast"); t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(()=>{ t.hidden = true; }, 3600); }
+/* Re-rendering replaces inputs; put focus back where it was. */
+function keepFocus(fn){
+  const a = document.activeElement, id = a && a.id;
+  const isText = a && (a.tagName==="TEXTAREA" || (a.tagName==="INPUT" && !/^(checkbox|radio|file)$/.test(a.type)));
+  let ss = null; if(isText){ try{ ss = a.selectionStart; }catch(e){} }
+  fn();
+  if(id && isText){ const b = document.getElementById(id); if(b && b !== a){ b.focus({preventScroll:true}); try{ if(ss !== null) b.setSelectionRange(ss, ss); }catch(e){} } }
+}
+/* ---------- EVENTS ---------- */
+document.addEventListener("click", e=>{
+  const tab = e.target.closest("[data-tab]"); if(tab){ showTab(tab.dataset.tab); return; }
+  const go = e.target.closest("[data-go]");
+  if(go){ if(go.dataset.order){ P.order = go.dataset.order; P.view = "setup"; } showTab(go.dataset.go); return; }
+  const hu = e.target.closest("[data-hu]"); if(hu){ H.pu = +hu.dataset.hu; renderHistory(); return; }
+  const hy = e.target.closest("[data-hy]"); if(hy){ H.py = +hy.dataset.hy; renderHistory(); return; }
+  const act = e.target.closest("[data-act]");
+  if(!act) return;
+  const a = act.dataset.act, u = act.dataset.u ? +act.dataset.u : null;
+  if(a==="start") startQuiz();
+  else if(a==="more") askMore();
+  else if(a==="cancelgen"){ if(P.ctl) P.ctl.abort(); }
+  else if(a==="pick") pick(+act.dataset.k);
+  else if(a==="next") next();
+  else if(a==="quit") quit();
+  else if(a==="again"){ P.view = "setup"; renderPractice(); window.scrollTo({top:0}); }
+  else if(a==="flag"){ flagQ(act.dataset.id); if(TAB==="materials") renderMaterials(); else act.remove(); }
+  else if(a==="unflag"){ setFlags(S.flags.slice(), false); renderAll(); toast(GUEST ? "Your flags were restored" : "Flagged questions restored"); }
+  else if(a==="copysum"){
+    const txt = sessionSummary(P.result);
+    const fallback = () => toast("Could not copy. Open History to see this session.");
+    try{ navigator.clipboard.writeText(txt).then(()=>toast("Session summary copied"), fallback); }catch(err){ fallback(); }
+  }
+  else if(a==="copycode"){
+    const ta = $("#code"); if(!ta) return;
+    ta.value = exportCode();
+    const done = () => toast("Progress code copied");
+    const fallback = () => { ta.focus(); ta.select(); toast("Select and copy the code shown"); };
+    try{ navigator.clipboard.writeText(ta.value).then(done, fallback); }catch(err){ fallback(); }
+  }
+  else if(a==="import"){
+    if(GUEST){ toast("Only the tracker’s owner can import progress"); return; }
+    const ta = $("#imp"); if(!ta || !ta.value.trim()){ toast("Paste a progress code first"); return; }
+    if(Date.now() - XARM > 4000){ XARM = Date.now(); act.textContent = "This replaces your progress here. Tap again to confirm"; setTimeout(()=>{ if(act.isConnected) act.textContent = "Import and replace my progress"; }, 4000); return; }
+    XARM = 0;
+    if(GUEST){ toast("Only the tracker’s owner can import progress"); return; }
+    try{ importCode(ta.value); DRAFT.imp = ""; P.sel = null; renderAll(); toast("Progress imported"); }catch(err){ toast("That code could not be read. Copy it again in full."); act.textContent = "Import and replace my progress"; }
+  }
+  /* syllabus editing */
+  else if(a==="edsyl"){ ED.on = !ED.on; ARM = null; renderSyllabus(); }
+  else if(a==="addsub") addSub(u);
+  else if(a==="rmsub") rmSub(u, act.dataset.s);
+  else if(a==="rsub"){ const s = unitOf(u) && unitOf(u).subs.find(x=>x.id===act.dataset.s); if(s){ delete s.off; sylChanged(); toast("Restored “"+short(s.name,40)+"”"); } }
+  else if(a==="addunit") addUnit();
+  else if(a==="rmunit"){ if(armed("rmunit"+u)) rmUnit(u); else arm("rmunit"+u, renderSyllabus); }
+  else if(a==="runit"){ const x = unitOf(u); if(x){ delete x.off; sylChanged(); toast("Restored “"+short(x.name,40)+"”"); } }
+  else if(a==="upmat"){ if(UP.u !== u){ UP.u = u; UP.subs = null; } showTab("materials"); }
+  /* practice scope */
+  else if(a==="subs"){ if(P.open.has(u)) P.open.delete(u); else P.open.add(u); renderSetup(); }
+  else if(a==="ssall"){ P.sel.set(u, new Set(activeSubs(unitOf(u)).map(s=>s.id))); renderSetup(); }
+  else if(a==="ssnone"){ P.sel.set(u, new Set()); renderSetup(); }
+  /* materials */
+  else if(a==="usall"){ UP.subs = null; renderMaterials(); }
+  else if(a==="usnone"){ UP.subs = new Set(); renderMaterials(); }
+  else if(a==="rmfile"){ UP.files.splice(+act.dataset.i, 1); renderMaterials(); }
+  else if(a==="extract") startExtraction();
+  else if(a==="stopjob"){ if(JOB && JOB.running){ stopAll(); renderJob(); } }
+  else if(a==="jobdone"){ JOB = null; renderMaterials(); window.scrollTo({top:0}); }
+  else if(a==="practjob"){ const j = JOB; JOB = null; practiseMat(j.u, j.subs); }
+  else if(a==="practmat"){ const m = MBY[act.dataset.id]; if(m) practiseMat(m.u, m.subs); }
+  else if(a==="delmat"){ const id = act.dataset.id; if(armed("del"+id)) deleteMat(id); else arm("del"+id, renderMaterials); }
+  else if(a==="mqall"){ MATALL.add(act.dataset.id); renderMaterials(); }
+});
+document.addEventListener("toggle", e=>{
+  const d = e.target; if(!d || !d.dataset) return;
+  if(d.classList && d.classList.contains("xfer")){ XOPEN = d.open; return; }
+  if(d.dataset.mq){ const id = d.dataset.mq; if(d.open === MATOPEN.has(id)) return; if(d.open) MATOPEN.add(id); else MATOPEN.delete(id); renderMaterials(); }
+  else if(d.dataset.tp && !ED.on){ const n = +d.dataset.tp; if(d.open) ED.open.add(n); else ED.open.delete(n); }
+}, true);
+document.addEventListener("input", e=>{
+  const t = e.target; if(!t || !t.id) return;
+  if(t.id === "up-pages") UP.pages = t.value;
+  else if(t.id === "who"){ WHO = t.value.slice(0,60); try{ localStorage.setItem("trbphys.who", WHO.trim()); }catch(e){} }
+  else if(t.id === "imp" || t.id.indexOf("add-") === 0) DRAFT[t.id] = t.value;
+});
+document.addEventListener("change", e=>{
+  const t = e.target;
+  if(t.dataset && t.dataset.unit){
+    const n = +t.dataset.unit, has = S.completed.includes(n);
+    if(t.checked && !has) S.completed.push(n);
+    if(!t.checked && has) S.completed = S.completed.filter(x=>x!==n);
+    S.completed.sort((a,b)=>a-b);
+    P.sel = null;
+    save();
+    if(t.checked && !live().some(q=>q.u===n)) toast(SAMPLE ? "Added. Upload its material, or Claude will write questions when you practise it." : "Added. Ask Claude in the chat for questions from its material.");
+    renderAll();
+    const again = document.querySelector('[data-unit="'+n+'"]'); if(again) again.focus();
+    return;
+  }
+  if(t.id === "up-file") return;
+  if(t.id === "up-u"){ UP.u = +t.value; UP.subs = null; renderMaterials(); const el = $("#up-u"); if(el) el.focus(); return; }
+  if(t.id === "up-pics"){ UP.pics = t.checked; return; }
+  if(t.id === "up-done"){ UP.done = t.checked; return; }
+  if(t.dataset && t.dataset.us){
+    const unit = unitOf(upUnit()); const set = UP.subs ? new Set(UP.subs) : new Set(activeSubs(unit).map(s=>s.id));
+    if(t.checked) set.add(t.dataset.us); else set.delete(t.dataset.us);
+    UP.subs = set; renderMaterials();
+    const el = document.querySelector('[data-us="'+t.dataset.us+'"]'); if(el) el.focus();
+    return;
+  }
+  const keep = () => {
+    const sel = t.dataset && t.dataset.su ? '[data-su="'+t.dataset.su+'"]' : t.dataset && t.dataset.ss ? '[data-ss="'+t.dataset.ss+'"]' : (t.name ? 'input[name="'+t.name+'"][value="'+t.value+'"]' : null);
+    renderSetup(); if(sel){ const el = document.querySelector(sel); if(el) el.focus(); }
+  };
+  if(t.dataset && t.dataset.su){ const n = +t.dataset.su; P.sel.set(n, t.checked ? new Set(activeSubs(unitOf(n)).map(s=>s.id)) : new Set()); keep(); return; }
+  if(t.dataset && t.dataset.ss){ const n = +t.dataset.u, set = P.sel.get(n) || new Set(); if(t.checked) set.add(t.dataset.ss); else set.delete(t.dataset.ss); P.sel.set(n, set); keep(); return; }
+  if(t.name==="per"){ P.per = +t.value; keep(); return; }
+  if(t.name==="order"){ P.order = t.value; keep(); return; }
+  if(t.name==="src"){ P.src = t.value; keep(); return; }
+  if(t.name==="fb"){ P.fb = t.value; keep(); return; }
+});
+document.addEventListener("keydown", e=>{
+  const t = e.target;
+  if(e.key === "Enter" && t && t.dataset && t.dataset.enter){
+    e.preventDefault();
+    const btn = document.querySelector('[data-act="'+t.dataset.enter+'"]'+(t.dataset.u ? '[data-u="'+t.dataset.u+'"]' : ''));
+    if(btn) btn.click();
+    return;
+  }
+  if(TAB!=="practice" || P.view!=="quiz" || e.metaKey || e.ctrlKey || e.altKey) return;
+  const k = e.key.toLowerCase(), it = P.items[P.i];
+  const idx = ["a","b","c","d"].indexOf(k) >= 0 ? ["a","b","c","d"].indexOf(k) : ["1","2","3","4"].indexOf(k);
+  if(idx >= 0 && idx < it.perm.length){ e.preventDefault(); pick(it.perm[idx]); }
+  else if(k==="enter" && P.picks[P.i]!==undefined && document.activeElement && document.activeElement.dataset.act!=="pick"){ e.preventDefault(); next(); }
+});
+window.addEventListener("beforeunload", e=>{ if(JOB && JOB.running){ e.preventDefault(); e.returnValue = ""; } });
+function renderAll(){
+  keepFocus(()=>{
+    renderDashboard();
+    renderSyllabus();
+    renderMaterials();
+    renderHistory();
+    if(P.view!=="quiz" && P.view!=="loading") renderPractice();
+  });
+}
+rebuildBank();
+loadLocal(lsKey);
+renderAll();
+showTab(TAB);
+connect();
+})();
+</script>
+
+</body>
+</html>
